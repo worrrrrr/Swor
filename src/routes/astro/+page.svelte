@@ -12,10 +12,9 @@
 	}
 
 	// =========================================================================
-	// LOCAL GLOBAL DATABASE (ฐานข้อมูลเมืองสำคัญรอบโลก ค้นหาได้ทันทีตั้งแต่ตัวอักษรแรก)so
+	// LOCAL GLOBAL DATABASE (ฐานข้อมูลเมืองสำคัญรอบโลก ค้นหาได้ทันทีตั้งแต่ตัวอักษรแรก)
 	// =========================================================================
 	const globalLocationDatabase: LocationSuggestion[] = [
-		// ประเทศไทย (ครบทุกภูมิภาคหลัก)
 		{ name: "Bangkok, Thailand", lat: 13.7563, lng: 100.5018, timezone: 7 },
 		{ name: "Yala, Thailand", lat: 6.5399, lng: 101.2813, timezone: 7 },
 		{ name: "Chiang Mai, Thailand", lat: 18.7883, lng: 98.9853, timezone: 7 },
@@ -23,8 +22,6 @@
 		{ name: "Chon Buri, Thailand", lat: 13.3611, lng: 100.9847, timezone: 7 },
 		{ name: "Nakhon Ratchasima, Thailand", lat: 14.9799, lng: 102.0978, timezone: 7 },
 		{ name: "Songkhla (Hat Yai), Thailand", lat: 7.0084, lng: 100.4747, timezone: 7 },
-		
-		// เอเชีย & โอเชียเนีย
 		{ name: "Tokyo, Japan", lat: 35.6762, lng: 139.6503, timezone: 9 },
 		{ name: "Osaka, Japan", lat: 34.6937, lng: 135.5023, timezone: 9 },
 		{ name: "Seoul, South Korea", lat: 37.5665, lng: 126.9780, timezone: 9 },
@@ -38,16 +35,12 @@
 		{ name: "Sydney, Australia", lat: -33.8688, lng: 151.2093, timezone: 10 },
 		{ name: "Melbourne, Australia", lat: -37.8136, lng: 144.9631, timezone: 10 },
 		{ name: "New Delhi, India", lat: 28.6139, lng: 77.2090, timezone: 5.5 },
-		
-		// ยุโรป
 		{ name: "London, United Kingdom", lat: 51.5074, lng: -0.1278, timezone: 1 },
 		{ name: "Paris, France", lat: 48.8566, lng: 2.3522, timezone: 2 },
 		{ name: "Berlin, Germany", lat: 52.5200, lng: 13.4050, timezone: 2 },
 		{ name: "Rome, Italy", lat: 41.9028, lng: 12.4964, timezone: 2 },
 		{ name: "Zurich, Switzerland", lat: 47.3769, lng: 8.5417, timezone: 2 },
 		{ name: "Amsterdam, Netherlands", lat: 52.3676, lng: 4.9041, timezone: 2 },
-		
-		// อเมริกา
 		{ name: "New York, United States", lat: 40.7128, lng: -74.0060, timezone: -4 },
 		{ name: "Los Angeles, United States", lat: 34.0522, lng: -118.2437, timezone: -7 },
 		{ name: "Chicago, United States", lat: 41.8781, lng: -87.6298, timezone: -5 },
@@ -61,31 +54,27 @@
 	// =========================================================================
 	let birthDate = $state<string>("1992-08-08"); 
 	let birthTime = $state<string>("16:49");
-	
 	let locationQuery = $state<string>("Yala, Thailand");
 	let latitude = $state<number>(6.5399);
 	let longitude = $state<number>(101.2813);
 	let timezoneOffset = $state<number>(7);
-	
 	let suggestions = $state<LocationSuggestion[]>([]);
 	let showSuggestions = $state<boolean>(false);
 	let activeTab = $state<string>("bazi");
 
 	// =========================================================================
-	// INSTANT LOCATION SEARCH CONTROLLER (พิมพ์ปุ๊บแสดงผลทันที ไม่ต้องพึ่งพาเน็ต)
+	// INSTANT LOCATION SEARCH CONTROLLER
 	// =========================================================================
 	function handleLocationInput(e: Event) {
 		const input = (e.target as HTMLInputElement).value;
 		locationQuery = input;
 
-		// ถ้าไม่มีการกรอกข้อมูล ให้ปิด Dropdown ทันที
 		if (input.trim().length === 0) {
 			suggestions = [];
 			showSuggestions = false;
 			return;
 		}
 
-		// ค้นหาคำแบบ Case-insensitive ทันทีตั้งแต่ตัวอักษรแรกที่กดลงไป
 		suggestions = globalLocationDatabase.filter(loc => 
 			loc.name.toLowerCase().includes(input.toLowerCase())
 		);
@@ -102,10 +91,9 @@
 	}
 
 	// =========================================================================
-	// DYNAMIC RE-ACTIVATE PIPELINE (ลอจิกรักษาระดับโฟกัส ป้องกันการเด้งหนี)
+	// DYNAMIC RE-ACTIVATE PIPELINE ($derived.by)
 	// =========================================================================
 	let finalResult = $derived.by(() => {
-		// ป้องกันการประมวลผลล้มเหลวระหว่างพิมพ์ปฏิทินในเสี้ยววินาทีที่ข้อความยังไม่สมบูรณ์
 		if (!birthDate || birthDate.length < 10) {
 			return createEmptyResult();
 		}
@@ -147,7 +135,7 @@
 			julianDay: "0.0000", solarTime: "00:00",
 			bazi: { year: {code:"--", element:"--", animal:"--"}, month: {code:"--", element:"--", animal:"--"}, day: {code:"--", element:"--", animal:"--"}, hour: {code:"--", element:"--", animal:"--"}, dayMaster: "--" },
 			western: { sunSign: "--", moonSign: "--", ascendant: "--" },
-			humanDesign: { type: "--", profile: "--", authority: "--", incarnationCross: "--", definedCenters: [] },
+			humanDesign: { type: "--", profile: "--", authority: "--", incarnationCross: "--", definedCenters: [] as string[] },
 			vedic: { lagna: "--", rashi: "--", nakshatra: "--", currentDasha: "--" },
 			thai: { rasri: "--", lannaDay: "--", tithi: "--", naksatYear: "--" }
 		};
@@ -181,7 +169,7 @@
 					/>
 					{#if showSuggestions}
 						<ul class="absolute z-50 w-full bg-slate-950 border border-slate-700 rounded-lg mt-1 max-h-48 overflow-y-auto shadow-2xl divide-y divide-slate-800">
-							{#each suggestions as loc}
+							{#each suggestions as loc (loc.name)}
 								<li>
 									<button type="button" onclick={() => selectLocation(loc)} class="w-full text-left px-3 py-2.5 text-xs text-slate-300 hover:bg-slate-800 hover:text-white transition">
 										🌍 {loc.name} <span class="text-[10px] text-slate-500 font-mono">(Zone: +{loc.timezone})</span>
@@ -218,7 +206,7 @@
 
 			<section class="lg:col-span-2 flex flex-col">
 				<div class="flex flex-wrap gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 mb-4">
-					{#each [ ['bazi', '☯️ Bazi'], ['western', '🌌 Western'], ['vedic', '🕉️ Vedic'], ['thai', '🇹🇭 ไทย'], ['hd', '🧬 Human Design'] ] as [id, name]}
+					{#each [ ['bazi', '☯️ Bazi'], ['western', '🌌 Western'], ['vedic', '🕉️ Vedic'], ['thai', '🇹🇭 ไทย'], ['hd', '🧬 Human Design'] ] as [id, name] (id)}
 						<button 
 							type="button"
 							onclick={() => activeTab = id} 
@@ -237,7 +225,7 @@
 								<span class="text-xs bg-amber-400/10 border border-amber-400/20 text-amber-300 px-2 py-0.5 rounded">ดิถีหลัก: {finalResult.bazi.dayMaster}</span>
 							</div>
 							<div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-								{#each [['เสาเวลา', finalResult.bazi.hour], ['เสาวัน', finalResult.bazi.day], ['เสาเดือน', finalResult.bazi.month], ['เสาปี', finalResult.bazi.year]] as [title, pillar]}
+								{#each [['เสาเวลา', finalResult.bazi.hour], ['เสาวัน', finalResult.bazi.day], ['เสาเดือน', finalResult.bazi.month], ['เสาปี', finalResult.bazi.year]] as [title, pillar] (title)}
 									<div class="bg-slate-950 p-4 rounded-xl border border-slate-800 text-center">
 										<span class="block text-[11px] text-slate-500 font-bold mb-1">{title}</span>
 										<span class="text-2xl font-black text-amber-400 block tracking-wide">{pillar.code}</span>
@@ -299,7 +287,7 @@
 								<p>Profile ตัวตน: <span class="text-purple-300 font-bold">{finalResult.humanDesign.profile}</span></p>
 								<p>ศูนย์รวมพลังงานที่นิยาม (Defined Centers):</p>
 								<div class="flex flex-wrap gap-1.5">
-									{#each finalResult.humanDesign.definedCenters as center}
+									{#each finalResult.humanDesign.definedCenters as center (center)}
 										<span class="bg-purple-900/50 border border-purple-500/30 px-2 py-0.5 rounded text-xs text-purple-200">⬡ {center}</span>
 									{/each}
 								</div>
