@@ -4,7 +4,7 @@
   import LeftSidebar from '$lib/components/LeftSidebar.svelte';
   import RightSidebar from '$lib/components/RightSidebar.svelte';
 
-  // Svelte 5: รับค่า children สำหรับส่วนกลาง
+  // Svelte 5: รับค่า children สำหรับส่วนกลางป
   let { children } = $props();
 </script>
 
