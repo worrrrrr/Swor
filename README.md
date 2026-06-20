@@ -2,7 +2,7 @@
 
 Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
 
-## Creating a project
+## Creating a projectSSS
 
 If you're seeing this, you've probably already done this step. Congrats!
 
@@ -30,7 +30,7 @@ npm run dev -- --open
 ```
 
 ## Building
-
+SVE
 To create a production version of your app:
 
 ```sh
