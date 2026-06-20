@@ -4,20 +4,31 @@
 
 @layer base {
   :root {
-    --bg-app: #f1f3f4;
+    --bg-app: #f8fafc; /* slate 50 */
     --bg-surface: #ffffff;
-    --border: #dadce0;
-    --text-main: #202124;
-    --accent: #1a73e8;
+    --border: #e2e8f0; /* slate 200 */
+    --text-main: #0f172a; /* slate 900 */
+    --accent: #4f46e5; /* indigo 600 */
+    --hue-primary: 234;
+  }
+
+  /* ส่วนต่อขยายระดับเนี๊ยบ: รองรับการแปลงสีทั้งแอปพลิเคชันเป็น Dark Mode */
+  :root.dark {
+    --bg-app: #0f172a; /* slate 900 */
+    --bg-surface: #1e293b; /* slate 800 */
+    --border: #334155; /* slate 700 */
+    --text-main: #f1f5f9; /* slate 100 */
+    --accent: #818cf8; /* indigo 400 */
   }
 }
 
 body {
   background-color: var(--bg-app);
   color: var(--text-main);
-  font-family: 'Google Sans', Roboto, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   overflow: hidden;
   margin: 0;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
 .notebook-shell {
@@ -25,39 +36,30 @@ body {
   grid-template-columns: 320px 1fr 360px;
   height: 100vh;
   overflow: hidden;
+  background-color: var(--bg-app);
 }
 
 .glass-panel {
   background: var(--bg-surface);
-  border-right: 1px solid var(--border);
+  border-color: var(--border);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  transition: background 0.2s ease, border-color 0.2s ease;
 }
 
 .main-view {
-  background: #f8f9fa;
+  background: var(--bg-app);
   overflow-y: auto;
-  padding: 40px;
+  padding: 32px;
   display: flex;
   justify-content: center;
+  align-items: flex-start;
 }
 
-.doc-sheet {
-  width: 100%;
-  max-width: 850px;
-  background: white;
-  min-height: 100vh;
-  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
-  padding: 60px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-}
-
-.chat-bubble {
-  padding: 12px 16px;
-  border-radius: 20px;
-  font-size: 0.95rem;
-  line-height: 1.5;
-  margin-bottom: 12px;
+/* คลาสยูทิลิตี้เสริมความเรียบร้อย */
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
