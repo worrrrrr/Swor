@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="url(#grad5)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <defs>
+    <linearGradient id="grad5" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#F472B6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#EC4899;stop-opacity:1" />
+    </linearGradient>
+    <style>
+      @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-5px); }
+      }
+      .community { animation: float 2.5s ease-in-out infinite; }
+    </style>
+  </defs>
+  <path class="community" d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+  <circle class="community" cx="9" cy="7" r="4"/>
+  <path class="community" d="M23 21v-2a4 4 0 00-3-3.87"/>
+  <path class="community" d="M16 3.13a4 4 0 010 7.75"/>
+</svg>

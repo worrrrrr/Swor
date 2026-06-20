@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="url(#grad4)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <defs>
+    <linearGradient id="grad4" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FCD34D;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#F59E0B;stop-opacity:1" />
+    </linearGradient>
+    <style>
+      @keyframes scale {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+      }
+      .library { animation: scale 2s ease-in-out infinite; }
+    </style>
+  </defs>
+  <path class="library" d="M4 19.5A2.5 2.5 0 016.5 17H20"/>
+  <path class="library" d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
+  <path class="library" d="M12 7v10"/>
+  <path class="library" d="M8 7v10"/>
+  <path class="library" d="M16 7v10"/>
+</svg>

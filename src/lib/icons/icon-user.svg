@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="url(#grad15)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <defs>
+    <linearGradient id="grad15" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#C084FC;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8B5CF6;stop-opacity:1" />
+    </linearGradient>
+    <style>
+      @keyframes glow {
+        0%, 100% { filter: drop-shadow(0 0 2px rgba(139, 92, 246, 0.3)); }
+        50% { filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.6)); }
+      }
+      .user { animation: glow 2s ease-in-out infinite; }
+    </style>
+  </defs>
+  <path class="user" d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+  <circle class="user" cx="12" cy="7" r="4"/>
+</svg>

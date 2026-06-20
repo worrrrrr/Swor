@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="url(#grad17)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <defs>
+    <linearGradient id="grad17" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FCD34D;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#F59E0B;stop-opacity:1" />
+    </linearGradient>
+    <style>
+      @keyframes up {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-4px); }
+      }
+      .publish { animation: up 1.8s ease-in-out infinite; }
+    </style>
+  </defs>
+  <path class="publish" d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/>
+  <polyline class="publish" points="8 12 12 16 16 12"/>
+  <path class="publish" d="M12 2v14"/>
+</svg>
