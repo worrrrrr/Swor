@@ -1,72 +1,49 @@
 <script lang="ts">
-  let { isOpen = $bindable(true) } = $props<{ isOpen?: boolean }>();
+	import Icon from './Icon.svelte';
 
-  let sources = $state([
-    { id: '1', name: 'ข้อมูลผูกดวงชะตา.pdf', type: 'pdf' },
-    { id: '2', name: 'ลิงก์บันทึกโหราศาสตร์.link', type: 'link' }
-  ]);
+	let { isOpen = $bindable(true) } = $props();
 
-  function handleAddSource() {
-    const name = prompt('กรอกชื่อแหล่งข้อมูล หรือ URL:');
-    if (!name) return;
-    const type = name.includes('http') || name.includes('.link') ? 'link' : 'pdf';
-    sources = [...sources, { id: crypto.randomUUID(), name, type }];
-  }
+	let tools = $state([
+		{ icon: 'ai', label: 'AI Assistant', desc: 'Ask anything', color: 'text-purple-500' },
+		{ icon: 'publish', label: 'Publish', desc: 'Share workspace', color: 'text-blue-500' },
+		{ icon: 'user', label: 'Community', desc: 'Join groups', color: 'text-emerald-500' },
+		{ icon: 'coder', label: 'Developer', desc: 'API & Docs', color: 'text-zinc-600' },
+	]);
 </script>
 
 {#if isOpen}
-  <div class="w-full h-full flex flex-col p-4 box-border">
-    <div class="flex items-center justify-between mb-4 flex-shrink-0 h-9">
-      <span class="font-bold text-zinc-800 text-sm tracking-tight flex items-center gap-2">
-        <button 
-          onclick={() => isOpen = false}
-          class="w-8 h-8 rounded-full border border-zinc-200 hover:bg-zinc-50 transition cursor-pointer flex items-center justify-center bg-white shadow-sm active:scale-95 focus:outline-none"
-          title="ซ่อนคลังข้อมูล"
-        >
-          <img src="/src/lib/icons/icon-library.svg" alt="Library Close" class="w-4 h-4 text-amber-500" />
-        </button>
-        คลังข้อมูลชะตา
-      </span>
-    </div>
+	<aside class="w-64 bg-white border border-zinc-200/80 rounded-2xl shadow-sm flex flex-col overflow-hidden transition-all duration-300 animate-fade-in-right">
+		<div class="p-4 border-b border-zinc-100">
+			<h3 class="text-xs font-bold text-zinc-800 uppercase tracking-widest">
+				Tools & Features
+			</h3>
+		</div>
 
-    <button 
-      onclick={handleAddSource}
-      class="border border-dashed border-zinc-200 bg-white hover:bg-zinc-50 rounded-xl p-4 text-center transition cursor-pointer mb-4 group flex-shrink-0 shadow-sm"
-    >
-      <span class="text-xs text-zinc-500 group-hover:text-zinc-800 font-bold flex items-center justify-center gap-1.5">
-        <img src="/src/lib/icons/icon-plus-circle.svg" alt="Add" class="w-3.5 h-3.5 opacity-70" />
-        + เพิ่มแหล่งข้อมูล (RAG)
-      </span>
-    </button>
-    
-    <div class="flex-1 overflow-y-auto space-y-1.5 pr-1 custom-scrollbar">
-      {#each sources as source (source.id)}
-        <div class="p-3 bg-white hover:bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-medium cursor-pointer transition shadow-sm flex items-center gap-2.5 text-zinc-700">
-          {#if source.type === 'pdf'}
-            <img src="/src/lib/icons/icon-folder.svg" alt="PDF" class="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
-            <span class="truncate flex-1">{source.name}</span>
-          {:else}
-            <img src="/src/lib/icons/icon-globe.svg" alt="Link" class="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
-            <span class="truncate flex-1">{source.name}</span>
-          {/if}
-        </div>
-      {/each}
-    </div>
-  </div>
-{:else}
-  <div class="w-full h-full flex flex-col items-center p-2 box-border pt-4">
-    <button 
-      onclick={() => isOpen = true}
-      class="w-9 h-9 rounded-full border border-zinc-200 hover:bg-zinc-50 transition cursor-pointer flex items-center justify-center bg-white shadow-sm active:scale-95 focus:outline-none"
-      title="กางเปิดคลังข้อมูล"
-    >
-      <img src="/src/lib/icons/icon-library.svg" alt="Library Open" class="w-4 h-4 text-zinc-600" />
-    </button>
-  </div>
+		<div class="flex-1 overflow-y-auto p-3 space-y-1">
+			{#each tools as tool}
+				<button class="w-full flex items-start gap-3 px-3 py-3 rounded-xl hover:bg-zinc-50 transition-colors text-left group">
+					<div class="w-9 h-9 rounded-lg bg-zinc-50 border border-zinc-100 flex items-center justify-center shrink-0 group-hover:border-zinc-200 group-hover:bg-white transition-colors">
+						<Icon name={tool.icon} size={18} class={tool.color} />
+					</div>
+					<div class="flex-1 min-w-0 pt-0.5">
+						<div class="text-sm font-semibold text-zinc-800 truncate">{tool.label}</div>
+						<div class="text-[11px] text-zinc-400 truncate mt-0.5">{tool.desc}</div>
+					</div>
+				</button>
+			{/each}
+		</div>
+
+		<!-- Pro Tip Card -->
+		<div class="p-4 border-t border-zinc-100">
+			<div class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-3.5 border border-indigo-100/50">
+				<div class="flex items-center gap-2 mb-2">
+					<Icon name="ai" size={14} class="text-indigo-500" />
+					<span class="text-[10px] font-bold text-indigo-700 uppercase tracking-wider">Pro Tip</span>
+				</div>
+				<p class="text-[11px] text-zinc-600 leading-relaxed">
+					Use <kbd class="px-1.5 py-0.5 bg-white rounded border border-zinc-200 text-[10px] font-mono text-zinc-500">⌘K</kbd> to search across all notebooks instantly.
+				</p>
+			</div>
+		</div>
+	</aside>
 {/if}
-
-<style>
-  .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-  .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-  .custom-scrollbar::-webkit-scrollbar-thumb { background: #e4e4e7; border-radius: 4px; }
-</style>

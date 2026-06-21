@@ -146,7 +146,7 @@
 	<div class="max-w-6xl mx-auto">
 		
 		<header class="mb-8 border-b border-slate-800 pb-4">
-			<h1 class="text-3xl font-black bg-gradient-to-r from-amber-400 via-emerald-400 to-indigo-400 bg-clip-text text-transparent">
+			<h1 class="text-3xl font-black bg-linear-to-r from-amber-400 via-emerald-400 to-indigo-400 bg-clip-text text-transparent">
 				OmniAstrology Engine Matrix
 			</h1>
 			<p class="text-slate-400 text-xs mt-1">ระบบดาราศาสตร์ประยุกต์ความเร็วสูง ค้นหาพิกัดโลกทันทีแบบไร้แรงหน่วง</p>
