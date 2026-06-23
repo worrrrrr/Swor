@@ -2,7 +2,9 @@
 	"$schema": "./node_modules/wrangler/config-schema.json",
 	"name": "swor",
 	"compatibility_date": "2026-06-19",
-	"compatibility_flags": ["nodejs_als"],
+	"compatibility_flags": [
+		"nodejs_als"
+	],
 	"main": ".svelte-kit/cloudflare/_worker.js",
 	"assets": {
 		"binding": "ASSETS",
@@ -12,5 +14,10 @@
 	"preview_urls": true,
 	"alias": {
 		"node:module": "./src/lib/polyfills/node-module.js"
+	},
+	"vars": {
+		"PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNhdG9pZ2ZnY2pydGhzeGVjb29tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxOTYyNDUsImV4cCI6MjA5MTc3MjI0NX0.NuY4R82gGvI__myGgqrm3Rx0-Dk44tZ9eWFr-wkaFRg",
+		"PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_H2GZqWeLDoxGhj-UpSLmAQ__GRn6PD-",
+		"PUBLIC_SUPABASE_URL": "https://catoigfgcjrthsxecoom.supabase.co"
 	}
 }

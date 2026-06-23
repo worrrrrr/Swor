@@ -5,12 +5,7 @@ import { defineConfig } from 'vite';
 export default defineConfig({
 	plugins: [
 		tailwindcss(),
-		sveltekit({
-			compilerOptions: {
-				runes: ({ filename }) =>
-					filename.split(/[/\\]/).includes('node_modules') ? undefined : true
-			}
-		})
+		sveltekit()  // <-- สำคัญมาก: ต้องไม่มี options ข้างในนี้!
 	],
 	ssr: {
 		noExternal: ['@swisseph/browser', '@swisseph/core', '@swisseph/node', /@swisseph\/.*/]
