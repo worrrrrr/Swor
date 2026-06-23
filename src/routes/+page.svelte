@@ -1,139 +1,110 @@
 <script lang="ts">
-	import Icon from '$lib/components/Icon.svelte';
+	import { resolveBaziChart } from '$lib/engine/baziResolver';
+	import { resolveEasternSystem } from '$lib/engine/easternEasternResolver';
+	import { resolveWesternChart } from '$lib/engine/westernResolver';
+	import { interpretHdResult } from '$lib/engine/hdInterpreter';
+	import type { BirthDateTime } from '$lib/engine/astroEngine';
 
-	let messages = $state([
-		{
-			id: 1,
-			type: 'system',
-			content: 'สวัสดีครับ ผมคือ Grounded Oracle Intelligence พร้อมช่วยเหลือคุณในการวิเคราะห์ข้อมูลและตอบคำถามจากแหล่งข้อมูลที่เชื่อถือได้',
-			time: '09:00'
-		}
-	]);
+	let name = $state('Worakrit');
+	let birthDate = $state('1992-08-08');
+	let birthTime = $state('16:49');
+	let latitude = $state(6.5411);
+	let longitude = $state(101.2813);
+	let timezoneOffset = $state(7);
 
-	let inputMessage = $state('');
+	// สั่งคำนวณ Real-time ทุกครั้งที่ค่าในฟอร์มขยับ
+	let birthInput = $derived.by(() => {
+		if (!birthDate || !birthTime) return null;
+		const [year, month, day] = birthDate.split('-').map(Number);
+		const [hour, minute] = birthTime.split(':').map(Number);
+		return { year, month, day, hour, minute, timezoneOffset } as BirthDateTime;
+	});
 
-	function handleSubmit() {
-		if (!inputMessage.trim()) return;
-		
-		messages = [
-			...messages,
-			{
-				id: messages.length + 1,
-				type: 'user',
-				content: inputMessage,
-				time: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
-			}
-		];
-		
-		inputMessage = '';
-		
-		// จำลองการตอบกลับของ AI
-		setTimeout(() => {
-			messages = [
-				...messages,
-				{
-					id: messages.length + 1,
-					type: 'system',
-					content: 'ผมได้รับข้อความของคุณแล้ว กำลังประมวลผลข้อมูลจากแหล่งข้อมูลที่เชื่อมโยงอยู่...',
-					time: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
-				}
-			];
-		}, 1000);
-	}
+	let baziResult = $derived(birthInput ? resolveBaziChart(birthInput, longitude) : null);
+	let easternResult = $derived(birthInput ? resolveEasternSystem(birthInput, longitude) : null);
+	let westernResult = $derived(
+		birthInput ? resolveWesternChart(birthInput, latitude, longitude) : null
+	);
+
+	// เชื่อมต่อเอนจินแปลผล Human Design โดยดึงค่าตรงจาก westernResult
+	let hdInterpretation = $derived.by(() => {
+		if (!westernResult) return null;
+		// ข้อมูลส่งตรงจากเอนจินที่คำนวณตามกฎ 1.72° และ 88 องศาถอยหลัง
+		return interpretHdResult(
+			westernResult.humanDesign.type,
+			westernResult.humanDesign.profile,
+		);
+	});
 </script>
 
-<div class="h-full flex flex-col max-w-4xl mx-auto">
-	<!-- Messages Area -->
-	<div class="flex-1 overflow-y-auto space-y-6 pr-2 custom-scrollbar">
-		{#each messages as message}
-			<div class="flex gap-4 animate-fade-in-up">
-				{#if message.type === 'system'}
-					<div class="w-10 h-10 rounded-xl bg-linear-to-br from-indigo-500 to-purple-600 flex items-center justify-center shrink-0 shadow-md shadow-indigo-200">
-						<Icon name="ai" size={20} class="text-white" />
-					</div>
-					<div class="flex-1 bg-white border border-zinc-200/80 rounded-2xl rounded-tl-none px-5 py-4 shadow-sm">
-						<p class="text-sm text-zinc-700 leading-relaxed">{message.content}</p>
-						<span class="text-[10px] text-zinc-400 mt-3 block font-medium">{message.time}</span>
-					</div>
-				{:else}
-					<div class="flex-1 flex justify-end">
-						<div class="bg-zinc-900 text-white rounded-2xl rounded-tr-none px-5 py-4 max-w-[80%] shadow-md shadow-zinc-200">
-							<p class="text-sm leading-relaxed">{message.content}</p>
-							<span class="text-[10px] text-zinc-400 mt-3 block text-right font-medium">{message.time}</span>
-						</div>
-					</div>
-				{/if}
+<div class="min-h-screen bg-[#f8fafc] text-[#0f172a] font-sans antialiased select-text p-6">
+	<div class="max-w-7xl mx-auto space-y-8">
+		<section class="bg-white border border-slate-200 rounded-[2rem] p-6 shadow-sm">
+			<h2 class="text-sm font-black mb-4">ปรับแต่งข้อมูลจริง (Live Data)</h2>
+			<div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
+				<input
+					type="text"
+					bind:value={name}
+					class="bg-slate-50 border rounded-xl p-3"
+					placeholder="ชื่อ"
+				/>
+				<input type="date" bind:value={birthDate} class="bg-slate-50 border rounded-xl p-3" />
+				<input type="time" bind:value={birthTime} class="bg-slate-50 border rounded-xl p-3" />
+				<div class="flex gap-2">
+					<input
+						type="number"
+						bind:value={latitude}
+						step="0.0001"
+						class="w-1/2 bg-slate-50 border rounded-xl p-3"
+					/>
+					<input
+						type="number"
+						bind:value={longitude}
+						step="0.0001"
+						class="w-1/2 bg-slate-50 border rounded-xl p-3"
+					/>
+				</div>
 			</div>
-		{/each}
-	</div>
-
-	<!-- Input Area -->
-	<div class="mt-6 bg-white border border-zinc-200/80 rounded-2xl p-2 shadow-sm shadow-zinc-100">
-		<div class="flex items-end gap-2">
-			<!-- Attachment Buttons -->
-			<div class="flex gap-1 pb-1.5">
-				<button class="w-9 h-9 rounded-xl hover:bg-zinc-100 flex items-center justify-center transition-colors text-zinc-500 hover:text-zinc-700">
-					<Icon name="plus-circle" size={18} />
-				</button>
-				<button class="w-9 h-9 rounded-xl hover:bg-zinc-100 flex items-center justify-center transition-colors text-zinc-500 hover:text-zinc-700">
-					<Icon name="search" size={18} />
-				</button>
+		</section>
+		{#if westernResult && hdInterpretation}
+			<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+				<div class="bg-white border border-slate-200 p-6 rounded-[2rem] shadow-sm">
+					<h3 class="text-[10px] font-bold text-slate-500 uppercase">Profile</h3>
+					<p class="text-2xl font-black text-cyan-600">{westernResult.humanDesign.incarnationCrossGates}</p>
+					<p class="text-xs text-slate-600 mt-2">{hdInterpretation.profileName}</p>
+					<p class="text-xs text-slate-600 mt-2">{hdInterpretation.profileDescription}</p>
+				</div>
+				<div class="bg-white border border-slate-200 p-6 rounded-[2rem] shadow-sm">
+					<h3 class="text-[10px] font-bold text-slate-500 uppercase">Type</h3>
+					<p class="text-xl font-black text-emerald-600">{westernResult.humanDesign.type}</p>
+					<p class="text-xs text-slate-600 mt-2">{hdInterpretation.typeName}</p>
+					<p class="text-xs text-slate-600 mt-2">{hdInterpretation.typeAura}</p>
+					<p class="text-xs text-slate-600 mt-2">{hdInterpretation.typeNotSelf}</p>
+				</div>
+				<div class="bg-white border border-slate-200 p-6 rounded-[2rem] shadow-sm">
+					<h3 class="text-[10px] font-bold text-slate-500 uppercase">Authority</h3>
+					<p class="text-xl font-black text-indigo-600">{westernResult.hdAuthority}</p>
+				</div>
 			</div>
-
-			<!-- Text Input -->
-			<textarea
-				bind:value={inputMessage}
-				placeholder="ถามคำถามหรือเพิ่มคำสั่ง..."
-				rows="1"
-				class="flex-1 resize-none border-0 focus:ring-0 text-sm text-zinc-700 placeholder-zinc-400 py-3 px-2 bg-transparent max-h-32 custom-scrollbar"
-				onkeydown={(e) => {
-					if (e.key === 'Enter' && !e.shiftKey) {
-						e.preventDefault();
-						handleSubmit();
-					}
-				}}
-			></textarea>
-			
-			<!-- Send Button -->
-			<button 
-				onclick={handleSubmit}
-				disabled={!inputMessage.trim()}
-				class="w-10 h-10 bg-zinc-900 text-white rounded-xl hover:bg-zinc-800 disabled:opacity-30 disabled:hover:bg-zinc-900 transition-all flex items-center justify-center shrink-0 shadow-md shadow-zinc-200 active:scale-95"
-			>
-				<Icon name="send" size={18} />
-			</button>
-		</div>
+		{/if}
 	</div>
-</div>
-
-<style>
-	/* Custom Scrollbar for Chat */
-	.custom-scrollbar::-webkit-scrollbar {
-		width: 4px;
-	}
-	.custom-scrollbar::-webkit-scrollbar-track {
-		background: transparent;
-	}
-	.custom-scrollbar::-webkit-scrollbar-thumb {
-		background: rgba(0, 0, 0, 0.08);
-		border-radius: 4px;
-	}
-	.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-		background: rgba(0, 0, 0, 0.15);
-	}
-
-	/* Animations */
-	@keyframes fade-in-up {
-		from { opacity: 0; transform: translateY(12px); }
-		to { opacity: 1; transform: translateY(0); }
-	}
-	.animate-fade-in-up {
-		animation: fade-in-up 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-	}
-
-	@keyframes fade-in-left {
-		from { opacity: 0; transform: translateX(-20px); }
-		to { opacity: 1; transform: translateX(0); }
-	}
 	
-</style>
+	<details>
+		<summary> Bazi Result: </summary>
+		{JSON.stringify(baziResult)}
+	</details>
+	<details>
+		<summary> easternResult: </summary>
+		{JSON.stringify(easternResult)}
+	</details>
+	<details>
+		<summary> Western Result: </summary>
+		{JSON.stringify(westernResult)}
+	</details>
+	<details>
+		<summary> hdInterpretation Result: </summary>
+		{JSON.stringify(hdInterpretation)}
+	</details>
+
+</div>	
+

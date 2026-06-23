@@ -12,17 +12,14 @@ export default defineConfig({
 			compilerOptions: {
 				runes: ({ filename }) =>
 					filename.split(/[/\\]/).includes('node_modules') ? undefined : true
-			},
-			adapter: adapter({
-		      // if you didn't specify `out`, it defaults to 'build'
-		      out: 'build' // <-- this is the directory
-		    }),
+			}	
+			,
 			preprocess: [mdsvex({ extensions: ['.svx', '.md'] })],
 			extensions: ['.svelte', '.svx', '.md']
 		})
 	],
 	ssr: {
-		noExternal: ['@swisseph/browser', '@swisseph/core', /@swisseph\/.*/]
+		noExternal: ['@swisseph/browser', '@swisseph/core','@swisseph/node', /@swisseph\/.*/]
 	},
 	optimizeDeps: {
 		include: ['@swisseph/browser', '@swisseph/core']
