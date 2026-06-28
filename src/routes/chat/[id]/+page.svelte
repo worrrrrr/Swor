@@ -11,13 +11,22 @@
   let initialized = $state(false);
   let deleting = $state(false);
 
-  onMount(() => {
+  onMount(async () => {
     const existing = chatStore.sessions.find(s => s.id === data.sessionId);
     if (existing) {
       chatStore.activeSessionId = data.sessionId;
     } else {
       chatStore.createNewSession(data.session?.title || 'แชท', data.sessionId);
     }
+
+    const dbMessages = await chatStore.loadMessagesFromDb(data.sessionId);
+    if (dbMessages.length > 0) {
+      const session = chatStore.sessions.find(s => s.id === data.sessionId);
+      if (session) {
+        session.messages = dbMessages;
+      }
+    }
+
     initialized = true;
   });
 

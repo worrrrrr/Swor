@@ -1,6 +1,10 @@
 <script lang="ts">
+  import { marked } from 'marked';
+
   let { role, content, provider } = $props<{ role: 'user' | 'assistant'; content: string; provider?: string }>();
   let showInfo = $state(false);
+
+  let html = $derived(role === 'assistant' ? marked(content, { breaks: true }) : '');
 </script>
 
 <div class="flex gap-4 {role === 'user' ? 'justify-end' : 'justify-start'}">
@@ -25,7 +29,13 @@
       {/if}
     </div>
     
-    <p class="whitespace-pre-wrap">{content}</p>
+    {#if role === 'assistant' && html}
+      <div class="prose prose-sm max-w-none prose-pre:bg-zinc-800 prose-pre:text-zinc-100 prose-code:text-pink-500 prose-a:text-blue-500">
+        {@html html}
+      </div>
+    {:else}
+      <p class="whitespace-pre-wrap">{content}</p>
+    {/if}
 
     {#if showInfo && provider}
       <div class="mt-2 pt-2 border-t border-zinc-300/30 text-[10px] text-zinc-400 font-mono">

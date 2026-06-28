@@ -72,6 +72,43 @@ export class ChatStore {
 		];
 	}
 
+	private async saveMessageToDb(msg: Message): Promise<void> {
+		try {
+			await supabase.from('chat_messages').insert({
+				id: msg.id,
+				session_id: this.activeSessionId,
+				role: msg.role,
+				content: msg.content,
+				provider: msg.provider || null,
+				created_at: msg.timestamp.toISOString(),
+			});
+		} catch (e) {
+			console.warn('[ChatStore] Failed to save message to DB (table may not exist):', e);
+		}
+	}
+
+	public async loadMessagesFromDb(sessionId: string): Promise<Message[]> {
+		try {
+			const { data } = await supabase
+				.from('chat_messages')
+				.select('*')
+				.eq('session_id', sessionId)
+				.order('created_at', { ascending: true });
+			if (data) {
+				return data.map((m: any) => ({
+					id: m.id,
+					role: m.role,
+					content: m.content,
+					timestamp: new Date(m.created_at),
+					provider: m.provider || undefined,
+				}));
+			}
+		} catch (e) {
+			console.warn('[ChatStore] Failed to load messages from DB:', e);
+		}
+		return [];
+	}
+
 	private addMessage(role: 'user' | 'assistant' | 'system', content: string, provider?: string): void {
 		if (!content.trim()) return;
 
@@ -90,6 +127,8 @@ export class ChatStore {
 			...this.sessions[sessionIndex].messages,
 			newMessage
 		];
+
+		this.saveMessageToDb(newMessage);
 	}
 
 	public async sendMessage(text: string): Promise<void> {
