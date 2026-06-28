@@ -1,16 +1,13 @@
-import {
-  GROQ_API_KEY,
-  GEMINI_API_KEY,
-  DEEPSEEK_API_KEY,
-  AI_PROVIDER,
-  OLLAMA_BASE_URL,
-  OLLAMA_MODEL,
-} from '$env/static/private';
+import { env } from '$env/dynamic/private';
 
 const GROQ_BASE = 'https://api.groq.com/openai/v1/chat/completions';
 
-const PROVIDER = AI_PROVIDER || 'groq';
-const OLLAMA_BASE = OLLAMA_BASE_URL || 'http://localhost:11434';
+const PROVIDER = env.AI_PROVIDER || 'groq';
+const OLLAMA_BASE = env.OLLAMA_BASE_URL || 'http://localhost:11434';
+
+function getKey(name: string): string {
+  return env[name] || '';
+}
 
 interface Message {
   role: string;
@@ -29,7 +26,7 @@ function groqConfig(): ProviderConfig {
   return {
     baseUrl: GROQ_BASE,
     model: 'llama-3.3-70b-versatile',
-    authHeader: `Bearer ${GROQ_API_KEY}`,
+    authHeader: `Bearer ${getKey('GROQ_API_KEY')}`,
     formatMessages(msgs, system) {
       return {
         messages: [{ role: 'system', content: system }, ...msgs],
@@ -44,7 +41,7 @@ function groqConfig(): ProviderConfig {
 
 function geminiConfig(): ProviderConfig {
   return {
-    baseUrl: `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+    baseUrl: `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${getKey('GEMINI_API_KEY')}`,
     model: 'gemini-2.0-flash',
     formatMessages(msgs, system) {
       const contents: any[] = [];
@@ -68,7 +65,7 @@ function deepseekConfig(): ProviderConfig {
   return {
     baseUrl: 'https://api.deepseek.com/v1/chat/completions',
     model: 'deepseek-chat',
-    authHeader: `Bearer ${DEEPSEEK_API_KEY}`,
+    authHeader: `Bearer ${getKey('DEEPSEEK_API_KEY')}`,
     formatMessages(msgs, system) {
       return {
         messages: [{ role: 'system', content: system }, ...msgs],
@@ -84,7 +81,7 @@ function deepseekConfig(): ProviderConfig {
 function ollamaConfig(): ProviderConfig {
   return {
     baseUrl: `${OLLAMA_BASE}/v1/chat/completions`,
-    model: OLLAMA_MODEL || 'llama3.2',
+    model: getKey('OLLAMA_MODEL') || 'llama3.2',
     formatMessages(msgs, system) {
       return {
         messages: [{ role: 'system', content: system }, ...msgs],
