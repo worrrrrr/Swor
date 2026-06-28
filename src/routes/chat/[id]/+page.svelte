@@ -38,10 +38,7 @@
     </div>
     <div class="chat-header-right">
       {#if chatStore.activeSession.messages.length > 0}
-        {@const lastMsg = chatStore.activeSession.messages[chatStore.activeSession.messages.length - 1]}
-        {#if lastMsg?.provider}
-          <span class="provider-badge">{lastMsg.provider}</span>
-        {/if}
+        <span class="provider-badge">{chatStore.activeSession.messages.find(m => m.provider)?.provider || 'groq'}</span>
       {/if}
       <button class="btn-icon-sm" onclick={deleteChat} disabled={deleting} type="button" title="ลบแชท">🗑</button>
     </div>
