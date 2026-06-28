@@ -4,7 +4,7 @@
 		name, 
 		class: className = '', 
 		size = 24 
-	} = $props();
+	}: { name: string; class?: string; size?: number } = $props();
 
 	// Map ชื่อไฟล์ (ตัด icon- และ .svg ออก) ไปยัง Path ของ SVG
 	// ใช้ Feather/Lucide paths เป็นมาตรฐานเพื่อให้เข้ากับ UI เดิม

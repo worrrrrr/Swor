@@ -24,9 +24,6 @@
 		>
 			<Icon name="list" size={18} />
 		</button>
-		{#if isOpen}
-			<span class="text-xs font-bold text-zinc-800 uppercase tracking-widest pr-2">Tools</span>
-		{/if}
 	</div>
 
 	<div class="flex-1 overflow-y-auto p-2 space-y-1 overflow-x-hidden">

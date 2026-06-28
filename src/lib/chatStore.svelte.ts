@@ -1,8 +1,5 @@
-/**
- * @file chatStore.svelte.ts
- * @description Enterprise Class-Based State Management using Svelte 5 Runes.
- */
 import { SvelteDate } from 'svelte/reactivity';
+import { supabase } from '$lib/supabaseClient';
 
 export interface Message {
 	id: string;
@@ -17,54 +14,32 @@ export interface ChatSession {
 	messages: Message[];
 }
 
-export class ChatStore {
-	// 1. บริหารจัดการกลุ่มข้อมูลเซสชันแยกขาดจากกันผ่านรูน $state
-	sessions = $state<ChatSession[]>([
-		{
-			id: 'session-1',
-			title: 'ตรวจดวงพิชัยสงครามปี 2026',
-			messages: [
-				{
-					id: 'm1',
-					role: 'assistant',
-					content: 'สวัสดีครับ! มีอะไรให้ผมช่วยเกี่ยวกับเอกสารนี้บ้างครับ?',
-					timestamp: new SvelteDate()
-				}
-			]
-		},
-		{
-			id: 'session-2',
-			title: 'วิเคราะห์พื้นดวงจีนสี่แถว (BaZi)',
-			messages: [
-				{
-					id: 'm2',
-					role: 'assistant',
-					content: 'ระบบโหราศาสตร์จีน BaZi พร้อมคำนวณและวิเคราะห์พลังงานธาตุเจ้าเรือนแล้วครับ',
-					timestamp: new SvelteDate()
-				}
-			]
-		}
-	]);
+function buildContextSummary(messages: Message[]): { context: string; recent: Message[] } {
+	const userTopics = messages
+		.filter(m => m.role === 'user')
+		.map(m => m.content.slice(0, 80).replace(/\n/g, ' '));
+	const context = userTopics.join(' → ');
+	const recent = messages.slice(-4);
+	return { context, recent };
+}
 
-	activeSessionId = $state<string>('session-1');
+export class ChatStore {
+	sessions = $state<ChatSession[]>([]);
+
+	activeSessionId = $state<string>('');
 	isProcessing = $state<boolean>(false);
 	activeEngineType = $state<string>('WESTERN');
 
-	constructor() {}
+	constructor() {
+		this.createNewSession('แชทใหม่');
+	}
 
-	/**
-	 * กฎเหล็กของ Svelte 5: การสร้าง Derived State ภายในโครงสร้าง Class 
-	 * ต้องใช้ JavaScript Getter เมธอด (get) เท่านั้น ห้ามใช้รูปแบบ activeSession = $derived(...) เด็ดขาด
-	 */
 	get activeSession(): ChatSession {
 		return this.sessions.find(s => s.id === this.activeSessionId) || this.sessions[0];
 	}
 
-	/**
-	 * สร้างเซสชันห้องสนทนาชุดใหม่และสลับ Pointer การนำทางไปห้องนั้นทันที
-	 */
-	public createNewSession(title: string): string {
-		const newId = crypto.randomUUID();
+	public createNewSession(title: string, existingId?: string): string {
+		const newId = existingId || crypto.randomUUID();
 		const newSession: ChatSession = {
 			id: newId,
 			title,
@@ -72,7 +47,7 @@ export class ChatStore {
 				{
 					id: crypto.randomUUID(),
 					role: 'assistant',
-					content: `เริ่มต้นพื้นที่จัดเตรียมข้อมูลสำหรับ: ${title}`,
+					content: 'สวัสดีครับ! มีอะไรให้ผมช่วยได้บ้าง?',
 					timestamp: new SvelteDate()
 				}
 			]
@@ -83,12 +58,22 @@ export class ChatStore {
 		return newId;
 	}
 
-	/**
-	 * เพิ่มข้อความลงในเซสชันย่อยที่กำลังเชื่อมต่ออยู่ในปัจจุบันอย่างปลอดภัย
-	 */
-	public addMessage(role: 'user' | 'assistant' | 'system', content: string): void {
+	public clearSession(): void {
+		const idx = this.sessions.findIndex(s => s.id === this.activeSessionId);
+		if (idx === -1) return;
+		this.sessions[idx].messages = [
+			{
+				id: crypto.randomUUID(),
+				role: 'assistant',
+				content: 'เคลียร์แล้วครับ พร้อมเริ่มต้นใหม่!',
+				timestamp: new SvelteDate()
+			}
+		];
+	}
+
+	private addMessage(role: 'user' | 'assistant' | 'system', content: string): void {
 		if (!content.trim()) return;
-		
+
 		const sessionIndex = this.sessions.findIndex(s => s.id === this.activeSessionId);
 		if (sessionIndex === -1) return;
 
@@ -99,13 +84,66 @@ export class ChatStore {
 			timestamp: new SvelteDate()
 		};
 
-		// อัปเดตข้อมูลด้วยวิธี Reactive Immutable Update ป้องกันสถานะแฝงตกหล่น
 		this.sessions[sessionIndex].messages = [
 			...this.sessions[sessionIndex].messages,
 			newMessage
 		];
 	}
+
+	public async sendMessage(text: string): Promise<void> {
+		if (!text.trim() || this.isProcessing) return;
+
+		this.addMessage('user', text);
+		this.isProcessing = true;
+
+		try {
+			const session = this.activeSession;
+			const { context, recent } = buildContextSummary(session.messages);
+
+			const messagesForApi: { role: string; content: string }[] = [];
+			if (context) {
+				messagesForApi.push({ role: 'system', content: `Previous discussion: ${context}` });
+			}
+			for (const m of recent) {
+				messagesForApi.push({ role: m.role, content: m.content });
+			}
+
+			const { data: { user } } = await supabase.auth.getUser();
+			const meta = user?.user_metadata || {};
+			const personality = meta.personality_mbti ? {
+				mbti: meta.personality_mbti,
+				enneagram: meta.personality_enneagram,
+				wing: meta.personality_enneagram_wing,
+			} : undefined;
+
+			const astroProfile = meta.birth_date ? {
+				birthDate: meta.birth_date,
+				birthTime: meta.birth_time,
+				latitude: meta.latitude,
+				longitude: meta.longitude,
+				timezoneOffset: meta.timezoneOffset,
+			} : undefined;
+
+			const res = await fetch('/api/chat', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ messages: messagesForApi, personality, astroProfile }),
+			});
+
+			const data = await res.json() as { reply?: string; error?: string };
+
+			if (!res.ok) {
+				throw new Error(data.error || 'API error');
+			}
+
+			this.addMessage('assistant', data.reply || 'ขออภัย ไม่สามารถตอบได้ในตอนนี้');
+		} catch (err) {
+			this.addMessage('assistant', 'ขออภัย เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่อีกครั้ง');
+			console.error('[ChatStore] sendMessage error:', err);
+		} finally {
+			this.isProcessing = false;
+		}
+	}
 }
 
-// ส่งออกแบบอินสแตนซ์เดี่ยว (Singleton Pattern) เพื่อใช้ร่วมกันทุกหน้าจอ
 export const chatStore = new ChatStore();

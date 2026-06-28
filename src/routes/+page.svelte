@@ -1,110 +1,139 @@
 <script lang="ts">
-	import { resolveBaziChart } from '$lib/engine/baziResolver';
-	import { resolveEasternSystem } from '$lib/engine/easternEasternResolver';
-	import { resolveWesternChart } from '$lib/engine/westernResolver';
-	import { interpretHdResult } from '$lib/engine/hdInterpreter';
-	import type { BirthDateTime } from '$lib/engine/astroEngine';
+  import { goto } from '$app/navigation';
+  import { supabase } from '$lib/supabaseClient';
 
-	let name = $state('Worakrit');
-	let birthDate = $state('1992-08-08');
-	let birthTime = $state('16:49');
-	let latitude = $state(6.5411);
-	let longitude = $state(101.2813);
-	let timezoneOffset = $state(7);
+  let { data } = $props<{ data: { posts: any[]; userId: string | null } }>();
 
-	// สั่งคำนวณ Real-time ทุกครั้งที่ค่าในฟอร์มขยับ
-	let birthInput = $derived.by(() => {
-		if (!birthDate || !birthTime) return null;
-		const [year, month, day] = birthDate.split('-').map(Number);
-		const [hour, minute] = birthTime.split(':').map(Number);
-		return { year, month, day, hour, minute, timezoneOffset } as BirthDateTime;
-	});
+  let chatText = $state('');
+  let creating = $state(false);
 
-	let baziResult = $derived(birthInput ? resolveBaziChart(birthInput, longitude) : null);
-	let easternResult = $derived(birthInput ? resolveEasternSystem(birthInput, longitude) : null);
-	let westernResult = $derived(
-		birthInput ? resolveWesternChart(birthInput, latitude, longitude) : null
-	);
+  function formatDate(date: string) {
+    return new Date(date).toLocaleDateString('th-TH', {
+      year: 'numeric', month: 'short', day: 'numeric'
+    });
+  }
 
-	// เชื่อมต่อเอนจินแปลผล Human Design โดยดึงค่าตรงจาก westernResult
-	let hdInterpretation = $derived.by(() => {
-		if (!westernResult) return null;
-		// ข้อมูลส่งตรงจากเอนจินที่คำนวณตามกฎ 1.72° และ 88 องศาถอยหลัง
-		return interpretHdResult(
-			westernResult.humanDesign.type,
-			westernResult.humanDesign.profile,
-		);
-	});
+  async function startChat() {
+    const trimmed = chatText.trim();
+    if (!trimmed || creating || !data.userId) return;
+    creating = true;
+
+    const { data: notebooks } = await supabase
+      .from('notebooks')
+      .select('id')
+      .eq('user_id', data.userId)
+      .eq('title', 'แชทของฉัน')
+      .limit(1);
+
+    let notebookId: string;
+    if (notebooks && notebooks.length > 0) {
+      notebookId = notebooks[0].id;
+    } else {
+      const { data: newNb } = await supabase
+        .from('notebooks')
+        .insert({ title: 'แชทของฉัน', user_id: data.userId })
+        .select('id')
+        .single();
+      notebookId = newNb!.id;
+    }
+
+    const { data: session } = await supabase
+      .from('chat_sessions')
+      .insert({
+        title: trimmed,
+        user_id: data.userId,
+        notebook_id: notebookId,
+      })
+      .select('id')
+      .single();
+
+    if (session) {
+      await supabase.from('notebook_items').insert({
+        notebook_id: notebookId,
+        type: 'chat',
+        title: trimmed,
+        source_id: session.id,
+      });
+      goto(`/chat/${session.id}`);
+    }
+    creating = false;
+  }
+
+  function handleKeydown(e: KeyboardEvent) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      startChat();
+    }
+  }
 </script>
 
-<div class="min-h-screen bg-[#f8fafc] text-[#0f172a] font-sans antialiased select-text p-6">
-	<div class="max-w-7xl mx-auto space-y-8">
-		<section class="bg-white border border-slate-200 rounded-[2rem] p-6 shadow-sm">
-			<h2 class="text-sm font-black mb-4">ปรับแต่งข้อมูลจริง (Live Data)</h2>
-			<div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
-				<input
-					type="text"
-					bind:value={name}
-					class="bg-slate-50 border rounded-xl p-3"
-					placeholder="ชื่อ"
-				/>
-				<input type="date" bind:value={birthDate} class="bg-slate-50 border rounded-xl p-3" />
-				<input type="time" bind:value={birthTime} class="bg-slate-50 border rounded-xl p-3" />
-				<div class="flex gap-2">
-					<input
-						type="number"
-						bind:value={latitude}
-						step="0.0001"
-						class="w-1/2 bg-slate-50 border rounded-xl p-3"
-					/>
-					<input
-						type="number"
-						bind:value={longitude}
-						step="0.0001"
-						class="w-1/2 bg-slate-50 border rounded-xl p-3"
-					/>
-				</div>
-			</div>
-		</section>
-		{#if westernResult && hdInterpretation}
-			<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-				<div class="bg-white border border-slate-200 p-6 rounded-[2rem] shadow-sm">
-					<h3 class="text-[10px] font-bold text-slate-500 uppercase">Profile</h3>
-					<p class="text-2xl font-black text-cyan-600">{westernResult.humanDesign.incarnationCrossGates}</p>
-					<p class="text-xs text-slate-600 mt-2">{hdInterpretation.profileName}</p>
-					<p class="text-xs text-slate-600 mt-2">{hdInterpretation.profileDescription}</p>
-				</div>
-				<div class="bg-white border border-slate-200 p-6 rounded-[2rem] shadow-sm">
-					<h3 class="text-[10px] font-bold text-slate-500 uppercase">Type</h3>
-					<p class="text-xl font-black text-emerald-600">{westernResult.humanDesign.type}</p>
-					<p class="text-xs text-slate-600 mt-2">{hdInterpretation.typeName}</p>
-					<p class="text-xs text-slate-600 mt-2">{hdInterpretation.typeAura}</p>
-					<p class="text-xs text-slate-600 mt-2">{hdInterpretation.typeNotSelf}</p>
-				</div>
-				<div class="bg-white border border-slate-200 p-6 rounded-[2rem] shadow-sm">
-					<h3 class="text-[10px] font-bold text-slate-500 uppercase">Authority</h3>
-					<p class="text-xl font-black text-indigo-600">{westernResult.hdAuthority}</p>
-				</div>
-			</div>
-		{/if}
-	</div>
-	
-	<details>
-		<summary> Bazi Result: </summary>
-		{JSON.stringify(baziResult)}
-	</details>
-	<details>
-		<summary> easternResult: </summary>
-		{JSON.stringify(easternResult)}
-	</details>
-	<details>
-		<summary> Western Result: </summary>
-		{JSON.stringify(westernResult)}
-	</details>
-	<details>
-		<summary> hdInterpretation Result: </summary>
-		{JSON.stringify(hdInterpretation)}
-	</details>
+<div class="page-wrap" style="display: flex; flex-direction: column; gap: 32px;">
+  <div style="text-align: center; padding: 40px 0 20px;">
+    <h1 style="font-size: 28px; font-weight: 800; color: #0f172a; margin: 0 0 6px 0;">Grounded Oracle</h1>
+    <p style="font-size: 14px; color: #64748b; margin: 0 0 24px 0;">ถามอะไรก็ได้ พร้อมวิเคราะห์ดวงชะตาด้วย AI</p>
+    <div style="display: flex; gap: 8px; max-width: 520px; margin: 0 auto;">
+      <input
+        class="input-base"
+        bind:value={chatText}
+        onkeydown={handleKeydown}
+        placeholder="ถาม Oracle ได้เลย..."
+        disabled={creating}
+      />
+      <button class="btn-dark" onclick={startChat} disabled={!chatText.trim() || creating} type="button">
+        {creating ? '...' : 'ส่ง'}
+      </button>
+    </div>
+  </div>
 
-</div>	
+  <div style="display: flex; flex-direction: column; gap: 24px;">
+    <section>
+      <div class="section-header">
+        <h2>📝 บทความล่าสุด</h2>
+        <button class="see-all" onclick={() => goto('/blog')} type="button">ดูทั้งหมด</button>
+      </div>
 
+      {#if data.posts.length === 0}
+        <p class="empty-text">ยังไม่มีบทความ</p>
+      {:else}
+        <div>
+          {#each data.posts as post (post.id)}
+            <button class="card" onclick={() => goto(`/blog/${post.slug}`)} type="button" style="margin-bottom: 6px;">
+              <div class="card-title">{post.title}</div>
+              <div class="card-meta">{formatDate(post.created_at)}</div>
+            </button>
+          {/each}
+        </div>
+      {/if}
+    </section>
+
+    <section>
+      <div class="section-header">
+        <h2>🔮 Astro Dashboard</h2>
+        <button class="see-all" onclick={() => goto('/astro')} type="button">เปิด</button>
+      </div>
+      <p class="empty-text" style="text-align: left; padding: 0;">ตรวจสอบดวงชะตาด้วย Human Design, BaZi (八字) และโหราศาสตร์ตะวันออก</p>
+    </section>
+
+    <section>
+      <div class="section-header">
+        <h2>💬 แชทล่าสุด</h2>
+        <button class="see-all" onclick={() => goto('/chat')} type="button">ดูทั้งหมด</button>
+      </div>
+      <p class="empty-text" style="text-align: left; padding: 0;">พิมพ์ข้อความด้านบนเพื่อเริ่มแชท หรือไปที่หน้าแชททั้งหมด</p>
+    </section>
+  </div>
+</div>
+
+<style>
+  .see-all {
+    font-size: 12px;
+    color: #3b82f6;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+  }
+  .see-all:hover {
+    text-decoration: underline;
+  }
+</style>
