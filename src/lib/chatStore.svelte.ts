@@ -6,6 +6,7 @@ export interface Message {
 	role: 'user' | 'assistant' | 'system';
 	content: string;
 	timestamp: Date;
+	provider?: string;
 }
 
 export interface ChatSession {
@@ -71,7 +72,7 @@ export class ChatStore {
 		];
 	}
 
-	private addMessage(role: 'user' | 'assistant' | 'system', content: string): void {
+	private addMessage(role: 'user' | 'assistant' | 'system', content: string, provider?: string): void {
 		if (!content.trim()) return;
 
 		const sessionIndex = this.sessions.findIndex(s => s.id === this.activeSessionId);
@@ -81,7 +82,8 @@ export class ChatStore {
 			id: crypto.randomUUID(),
 			role,
 			content,
-			timestamp: new SvelteDate()
+			timestamp: new SvelteDate(),
+			provider,
 		};
 
 		this.sessions[sessionIndex].messages = [
@@ -130,13 +132,13 @@ export class ChatStore {
 				body: JSON.stringify({ messages: messagesForApi, personality, astroProfile }),
 			});
 
-			const data = await res.json() as { reply?: string; error?: string };
+			const data = await res.json() as { reply?: string; provider?: string; error?: string };
 
 			if (!res.ok) {
 				throw new Error(data.error || 'API error');
 			}
 
-			this.addMessage('assistant', data.reply || 'ขออภัย ไม่สามารถตอบได้ในตอนนี้');
+			this.addMessage('assistant', data.reply || 'ขออภัย ไม่สามารถตอบได้ในตอนนี้', data.provider);
 		} catch (err) {
 			this.addMessage('assistant', 'ขออภัย เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่อีกครั้ง');
 			console.error('[ChatStore] sendMessage error:', err);

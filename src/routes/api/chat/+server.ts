@@ -1,5 +1,5 @@
 import type { RequestHandler } from './$types';
-import { callAI } from '$lib/ai/provider';
+import { callAI, getCurrentProvider } from '$lib/ai/provider';
 
 export const POST: RequestHandler = async ({ request }) => {
   const { messages, personality, astroProfile } = await request.json() as {
@@ -23,7 +23,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
   try {
     const reply = await callAI(messages, systemPrompt, 2048);
-    return new Response(JSON.stringify({ reply }), {
+    return new Response(JSON.stringify({ reply, provider: getCurrentProvider() }), {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (err: any) {

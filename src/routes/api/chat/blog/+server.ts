@@ -1,5 +1,5 @@
 import type { RequestHandler } from './$types';
-import { callAI } from '$lib/ai/provider';
+import { callAI, getCurrentProvider } from '$lib/ai/provider';
 
 export const POST: RequestHandler = async ({ request }) => {
   const { messages, blogContent, personality, astroProfile } = await request.json() as {
@@ -57,7 +57,7 @@ ${blogContent || '(ยังไม่มีเนื้อหา)'}
     const reply = chatParts.join('\n\n') || fullReply;
     const blogAppend = blogParts.filter(Boolean).join('\n\n');
 
-    return new Response(JSON.stringify({ reply, blogAppend: blogAppend || null }), {
+    return new Response(JSON.stringify({ reply, blogAppend: blogAppend || null, provider: getCurrentProvider() }), {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (err: any) {

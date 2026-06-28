@@ -36,13 +36,21 @@
       <button class="back-btn" onclick={() => goto('/chat')} type="button">←</button>
       <h2 class="chat-title">{data.session?.title || 'แชท'}</h2>
     </div>
-    <button class="btn-icon-sm" onclick={deleteChat} disabled={deleting} type="button" title="ลบแชท">🗑</button>
+    <div class="chat-header-right">
+      {#if chatStore.activeSession.messages.length > 0}
+        {@const lastMsg = chatStore.activeSession.messages[chatStore.activeSession.messages.length - 1]}
+        {#if lastMsg?.provider}
+          <span class="provider-badge">{lastMsg.provider}</span>
+        {/if}
+      {/if}
+      <button class="btn-icon-sm" onclick={deleteChat} disabled={deleting} type="button" title="ลบแชท">🗑</button>
+    </div>
   </header>
 
   <div class="chat-messages">
     {#if initialized}
       {#each chatStore.activeSession.messages as msg (msg.id)}
-        <ChatBubble role={msg.role as 'user' | 'assistant'} content={msg.content} />
+        <ChatBubble role={msg.role as 'user' | 'assistant'} content={msg.content} provider={msg.provider} />
       {/each}
 
       {#if chatStore.isProcessing}
@@ -96,6 +104,23 @@
   .back-btn:hover {
     color: #0f172a;
     background: #f1f5f9;
+  }
+
+  .chat-header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .provider-badge {
+    font-size: 9px;
+    font-weight: 600;
+    font-family: monospace;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: #d1fae5;
+    color: #065f46;
+    text-transform: uppercase;
   }
 
   .chat-title {
