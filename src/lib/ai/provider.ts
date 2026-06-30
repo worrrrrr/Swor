@@ -41,8 +41,8 @@ function groqConfig(): ProviderConfig {
 
 function geminiConfig(): ProviderConfig {
   return {
-    baseUrl: `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${getKey('GEMINI_API_KEY')}`,
-    model: 'gemini-2.0-flash',
+    baseUrl: `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${getKey('GEMINI_API_KEY')}`,
+    model: 'models/gemini-3.5-flash',
     formatMessages(msgs, system) {
       const contents: any[] = [];
       if (system) {

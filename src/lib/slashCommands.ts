@@ -3,79 +3,60 @@ export interface SlashNode {
   label: string;
   icon?: string;
   children?: SlashNode[];
-  prompt?: string; // ถ้าเป็น leaf → ส่ง prompt นี้ไปให้ AI
+  prompt?: string;          // text to insert as user message
+  systemPrompt?: string;    // if set, becomes active system prompt
 }
 
 const TREE: SlashNode[] = [
   {
-    key: 'astro', label: '🔮 ดูดวง', children: [
+    key: 'astro', label: '🔮 ดูดวง', icon: '🔮', children: [
       {
         key: 'hd', label: 'Human Design', children: [
-          { key: 'profile', label: 'Profile', prompt: 'วิเคราะห์ Human Design Profile ของฉันให้ละเอียด' },
-          { key: 'type', label: 'Energy Type', prompt: 'Energy Type ของฉันใน Human Design คืออะไร?' },
-          { key: 'authority', label: 'Authority', prompt: 'Inner Authority ของฉันใน Human Design คืออะไร?' },
-          { key: 'centers', label: 'ศูนย์พลังงาน', prompt: 'อธิบายศูนย์พลังงานทั้ง 9 ใน Human Design ของฉัน' },
+          { key: 'profile', label: 'Profile', systemPrompt: 'คุณคือนักวิเคราะห์ Human Design ผู้เชี่ยวชาญ ตอบอย่างละเอียด ตรงประเด็น', prompt: 'วิเคราะห์ Human Design Profile ของฉันให้ละเอียด' },
+          { key: 'type', label: 'Energy Type', systemPrompt: 'คุณคือนักวิเคราะห์ Human Design ผู้เชี่ยวชาญ', prompt: 'Energy Type ของฉันใน Human Design คืออะไร?' },
         ]
       },
       {
         key: 'bazi', label: 'BaZi (八字)', children: [
-          { key: 'chart', label: 'ดูดวงเต็ม', prompt: 'วิเคราะห์ BaZi (八字) ของฉันอย่างละเอียด' },
-          { key: 'element', label: 'ธาตุประจำตัว', prompt: 'ธาตุประจำตัวของฉันใน BaZi คืออะไร?' },
-          { key: 'animal', label: 'ปีนักษัตร', prompt: 'ปีนักษัตรของฉันคืออะไร?' },
+          { key: 'chart', label: 'ดูดวงเต็ม', systemPrompt: 'คุณคืออาจารย์พยากรณ์ BaZi ผู้เชี่ยวชาญ', prompt: 'วิเคราะห์ BaZi ของฉันอย่างละเอียด' },
+          { key: 'element', label: 'ธาตุ', systemPrompt: 'คุณคืออาจารย์พยากรณ์ BaZi', prompt: 'ธาตุประจำตัวของฉันคืออะไร?' },
         ]
       },
       {
         key: 'vedic', label: 'Vedic', children: [
-          { key: 'lagna', label: 'ลัคนา', prompt: 'ลัคนา (Lagna) ของฉันใน Vedic Astrology คืออะไร?' },
-          { key: 'nakshatra', label: 'Nakshatra', prompt: 'Nakshatra ของฉันคืออะไร?' },
+          { key: 'lagna', label: 'ลัคนา', systemPrompt: 'คุณคือนักโหราศาสตร์ Vedic', prompt: 'ลัคนา (Lagna) ของฉันคืออะไร?' },
         ]
       },
       {
         key: 'western', label: 'Western', children: [
-          { key: 'sign', label: 'ราศี', prompt: 'ราศีของฉันใน Western Astrology คืออะไร?' },
-          { key: 'house', label: 'House', prompt: 'วิเคราะห์ House ใน Western Astrology ของฉัน' },
+          { key: 'sign', label: 'ราศี', systemPrompt: 'คุณคือนักโหราศาสตร์ Western', prompt: 'ราศีของฉันคืออะไร?' },
         ]
       },
     ]
   },
   {
-    key: 'personality', label: '🧠 บุคลิกภาพ', children: [
-      {
-        key: 'mbti', label: 'MBTI', children: [
-          { key: 'type', label: 'ประเภทของฉัน', prompt: 'MBTI ของฉันคืออะไร? อธิบาย' },
-          { key: 'function', label: 'Cognitive Functions', prompt: 'อธิบาย Cognitive Functions ของ MBTI type ฉัน' },
-          { key: 'shadow', label: 'Shadow Core', prompt: 'Shadow Core (แก่นที่ซ่อนอยู่) ของ MBTI type ฉันคืออะไร?' },
-        ]
-      },
-      {
-        key: 'enneagram', label: 'Enneagram', children: [
-          { key: 'type', label: 'ประเภทของฉัน', prompt: 'Enneagram Type ของฉันคืออะไร? อธิบาย' },
-          { key: 'triad', label: 'Triad', prompt: 'Triad ของ Enneagram type ฉันคืออะไร?' },
-        ]
-      },
+    key: 'personality', label: '🧠 บุคลิกภาพ', icon: '🧠', children: [
+      { key: 'mbti', label: 'MBTI', systemPrompt: 'คุณคือนักจิตวิทยาผู้เชี่ยวชาญด้าน MBTI', prompt: 'MBTI ของฉันคืออะไร?' },
+      { key: 'enneagram', label: 'Enneagram', systemPrompt: 'คุณคือนักจิตวิทยาผู้เชี่ยวชาญด้าน Enneagram', prompt: 'Enneagram Type ของฉันคืออะไร?' },
     ]
   },
   {
-    key: 'blog', label: '📝 บทความ', children: [
-      { key: 'write', label: 'เขียนบทความ', prompt: 'ช่วยฉันเขียนบทความเกี่ยวกับ' },
-      { key: 'edit', label: 'เรียบเรียง', prompt: 'ช่วยเรียบเรียงเนื้อหานี้ให้ดีขึ้น' },
+    key: 'blog', label: '📝 บทความ', icon: '📝', children: [
+      { key: 'write', label: 'เขียนบทความ', systemPrompt: 'คุณคือนักเขียนบทความมืออาชีพ', prompt: 'ช่วยฉันเขียนบทความเกี่ยวกับ' },
+      { key: 'edit', label: 'เรียบเรียง', systemPrompt: 'คุณคือบรรณาธิการ', prompt: 'ช่วยเรียบเรียงเนื้อหานี้ให้ดีขึ้น' },
     ]
   },
   {
-    key: 'web', label: '🌐 สร้างเว็บ', children: [
-      { key: 'ecommerce', label: 'ร้านค้าออนไลน์', prompt: 'ช่วยออกแบบเว็บร้านค้าออนไลน์' },
-      { key: 'saas', label: 'SaaS', prompt: 'ช่วยออกแบบเว็บ SaaS' },
-      { key: 'ai-agent', label: 'AI Agent', prompt: 'ช่วยออกแบบ AI Agent' },
-      { key: 'blog-site', label: 'Blog Site', prompt: 'ช่วยออกแบบเว็บบล็อก' },
-      { key: 'portfolio', label: 'Portfolio', prompt: 'ช่วยออกแบบ Portfolio' },
-      { key: 'dashboard', label: 'Dashboard', prompt: 'ช่วยออกแบบ Dashboard' },
+    key: 'translate', label: '🌍 แปลภาษา', icon: '🌍', children: [
+      { key: 'to-thai', label: 'เป็นไทย', systemPrompt: 'คุณคือนักแปล แปลจากภาษาอื่นเป็นไทย ธรรมชาติ', prompt: 'แปลข้อความนี้เป็นภาษาไทย:' },
+      { key: 'to-en', label: 'เป็นอังกฤษ', systemPrompt: 'You are a professional English translator.', prompt: 'Translate this to English:' },
     ]
   },
   {
-    key: 'help', label: '💡 ช่วยเหลือ', prompt: 'คุณช่วยอะไรฉันได้บ้าง? แนะนำฟีเจอร์ทั้งหมด'
+    key: 'help', label: '💡 ช่วยเหลือ', icon: '💡', prompt: 'คุณช่วยอะไรฉันได้บ้าง? แนะนำฟีเจอร์ทั้งหมด'
   },
   {
-    key: 'clear', label: '🗑 ล้างแชท', prompt: '__CLEAR__'
+    key: 'clear', label: '🗑 ล้างแชท', icon: '🗑', prompt: '__CLEAR__'
   },
 ];
 

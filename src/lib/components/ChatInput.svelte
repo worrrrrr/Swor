@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { chatStore } from '$lib/chatStore.svelte';
   import { filterSuggestions } from '$lib/suggestions';
   import { matchPath, findNode, TREE, type SlashNode } from '$lib/slashCommands';
@@ -8,8 +9,8 @@
   let textareaRef: HTMLTextAreaElement | undefined = $state();
   let showSuggestions = $state(false);
   let selectedIdx = $state(-1);
+  let isListening = $state(false);
 
-  // Slash command state
   let slashPath = $state<string[]>([]);
   let slashPartial = $state('');
   let showSlash = $state(false);
@@ -30,7 +31,7 @@
   function autoResize() {
     if (!textareaRef) return;
     textareaRef.style.height = 'auto';
-    textareaRef.style.height = Math.min(textareaRef.scrollHeight, 140) + 'px';
+    textareaRef.style.height = Math.min(textareaRef.scrollHeight, 120) + 'px';
   }
 
   function updateSlash() {
@@ -50,532 +51,295 @@
 
   function selectSlashNode(node: SlashNode) {
     if (node.children && node.children.length > 0) {
-      // ไป deeper
       const newPath = [...slashPath, node.key];
       const result = findNode(newPath);
-      slashPath = newPath;
-      slashPartial = '';
-      slashNodes = result.children;
-      slashNode = result.node;
-      text = '/' + newPath.join('/') + '/';
-      selectedIdx = -1;
-      autoResize();
+      slashPath = newPath; slashPartial = ''; slashNodes = result.children; slashNode = result.node;
+      text = '/' + newPath.join('/') + '/'; selectedIdx = -1; autoResize();
     } else if (node.prompt === '__CLEAR__') {
-      chatStore.clearSession();
-      text = '';
-      showSlash = false;
-      autoResize();
-    } else if (node.prompt) {
-      text = node.prompt + ' ';
-      showSlash = false;
-      autoResize();
-      textareaRef?.focus();
+      chatStore.clearSession(); text = ''; showSlash = false; autoResize();
+    } else if (node.systemPrompt || node.prompt) {
+      if (node.systemPrompt) chatStore.setActivePrompt({ id: (node as any)._id || node.key, title: node.label, content: node.systemPrompt });
+      text = node.prompt && node.prompt !== node.systemPrompt ? node.prompt + ' ' : '';
+      showSlash = false; autoResize(); textareaRef?.focus();
     }
   }
 
   function goBackSlash() {
-    if (slashPath.length === 0) {
-      showSlash = false;
-      text = '';
-      return;
-    }
+    if (slashPath.length === 0) { showSlash = false; text = ''; return; }
     const newPath = slashPath.slice(0, -1);
     const result = findNode(newPath);
-    slashPath = newPath;
-    slashPartial = '';
-    slashNodes = result.children;
-    slashNode = result.node;
-    text = newPath.length > 0 ? '/' + newPath.join('/') + '/' : '/';
-    selectedIdx = -1;
-    autoResize();
+    slashPath = newPath; slashPartial = ''; slashNodes = result.children; slashNode = result.node;
+    text = '/' + newPath.join('/') + '/'; selectedIdx = -1; autoResize();
   }
 
   function selectSuggestion(s: string) {
-    text = s;
-    showSuggestions = false;
-    selectedIdx = -1;
-    autoResize();
-    textareaRef?.focus();
+    text = s; showSuggestions = false; selectedIdx = -1; autoResize(); textareaRef?.focus();
   }
 
   function handleSend() {
     const trimmed = text.trim();
     if (!trimmed || chatStore.isProcessing) return;
-    text = '';
-    showSuggestions = false;
-    showSlash = false;
-    selectedIdx = -1;
-    autoResize();
+    text = ''; showSuggestions = false; showSlash = false; selectedIdx = -1; autoResize();
     chatStore.sendMessage(trimmed);
   }
 
   function handleKeydown(e: KeyboardEvent) {
-    // Slash command navigation
     if (showSlash && filteredSlashNodes.length > 0) {
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        selectedIdx = Math.min(selectedIdx + 1, filteredSlashNodes.length - 1);
-        return;
-      }
-      if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        if (selectedIdx <= 0 && slashPath.length > 0) {
-          goBackSlash();
-          return;
-        }
-        selectedIdx = Math.max(selectedIdx - 1, 0);
-        return;
-      }
-      if (e.key === 'Tab' || (e.key === 'Enter' && selectedIdx >= 0)) {
-        e.preventDefault();
-        if (selectedIdx >= 0 && selectedIdx < filteredSlashNodes.length) {
-          selectSlashNode(filteredSlashNodes[selectedIdx]);
-        }
-        return;
-      }
-      if (e.key === 'Backspace' && text.endsWith('/') && slashPath.length > 0) {
-        e.preventDefault();
-        goBackSlash();
-        return;
-      }
+      if (e.key === 'ArrowDown') { e.preventDefault(); selectedIdx = Math.min(selectedIdx + 1, filteredSlashNodes.length - 1); return; }
+      if (e.key === 'ArrowUp') { e.preventDefault(); if (selectedIdx <= 0 && slashPath.length > 0) { goBackSlash(); return; } selectedIdx = Math.max(selectedIdx - 1, 0); return; }
+      if (e.key === 'Tab' || (e.key === 'Enter' && selectedIdx >= 0)) { e.preventDefault(); if (selectedIdx >= 0) selectSlashNode(filteredSlashNodes[selectedIdx]); return; }
+      if (e.key === 'Backspace' && text.endsWith('/') && slashPath.length > 0) { e.preventDefault(); goBackSlash(); return; }
     }
-
-    // Regular suggestion navigation
     if (!showSlash && showSuggestions && suggestions.length > 0) {
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        selectedIdx = Math.min(selectedIdx + 1, suggestions.length - 1);
-        return;
-      }
-      if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        selectedIdx = Math.max(selectedIdx - 1, 0);
-        return;
-      }
-      if (e.key === 'Tab' || (e.key === 'Enter' && selectedIdx >= 0)) {
-        e.preventDefault();
-        if (selectedIdx >= 0 && selectedIdx < suggestions.length) {
-          selectSuggestion(suggestions[selectedIdx]);
-        }
-        return;
-      }
+      if (e.key === 'ArrowDown') { e.preventDefault(); selectedIdx = Math.min(selectedIdx + 1, suggestions.length - 1); return; }
+      if (e.key === 'ArrowUp') { e.preventDefault(); selectedIdx = Math.max(selectedIdx - 1, 0); return; }
+      if (e.key === 'Tab' || (e.key === 'Enter' && selectedIdx >= 0)) { e.preventDefault(); if (selectedIdx >= 0) selectSuggestion(suggestions[selectedIdx]); return; }
     }
-
-    if (e.key === 'Escape') {
-      showSuggestions = false;
-      showSlash = false;
-      selectedIdx = -1;
-      return;
-    }
-
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
+    if (e.key === 'Escape') { showSuggestions = false; showSlash = false; selectedIdx = -1; return; }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
   }
 
   function handleInput() {
     autoResize();
-    if (text.startsWith('/')) {
-      updateSlash();
-      showSuggestions = false;
-    } else {
-      showSlash = false;
-      showSuggestions = suggestions.length > 0;
-      selectedIdx = -1;
-    }
+    if (text.startsWith('/')) { updateSlash(); showSuggestions = false; }
+    else { showSlash = false; showSuggestions = suggestions.length > 0; selectedIdx = -1; }
   }
 
-  function handleAttach() {
-    console.log('[ChatInput] แนบไฟล์');
-  }
+  function clearPrompt() { chatStore.setActivePrompt(null); }
 
-  function handleSearch() {
-    console.log('[ChatInput] ค้นหา');
-  }
-
-  function handleBlur() {
-    setTimeout(() => {
-      showSuggestions = false;
-      showSlash = false;
-      selectedIdx = -1;
-    }, 200);
+  let recognition: any = null;
+  function toggleVoice() {
+    if (isListening) { recognition?.stop(); isListening = false; return; }
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) { alert('เบราว์เซอร์นี้ไม่รองรับ Voice Input'); return; }
+    recognition = new SpeechRecognition();
+    recognition.lang = 'th-TH';
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.onresult = (event: any) => {
+      text = Array.from(event.results).map((r: any) => r[0].transcript).join('');
+      autoResize();
+    };
+    recognition.onend = () => { isListening = false; };
+    recognition.onerror = () => { isListening = false; };
+    recognition.start();
+    isListening = true;
   }
 </script>
 
 <div class="chat-input-wrapper">
-  <div class="input-with-suggestions">
+  {#if chatStore.activePrompt}
+    <div class="prompt-badge">
+      <span class="prompt-dot">⚡</span>
+      <span class="prompt-name">{chatStore.activePrompt.title}</span>
+      <button class="prompt-x" onclick={clearPrompt} type="button">×</button>
+    </div>
+  {/if}
+
+  <div class="input-area">
     {#if text.startsWith('/') && showSlash}
       <div class="slash-dropdown">
-        <div class="slash-breadcrumb">
+        <div class="slash-crumb">
           {#each slashPath as p, i}
-            <span class="crumb-item">{p}</span>
+            <span class="crumb-part">/ {p}</span>
             {#if i < slashPath.length - 1}<span class="crumb-sep">/</span>{/if}
           {/each}
-          {#if slashNode}
-            <span class="crumb-sep">/</span>
-            <span class="crumb-current">{slashNode.label}</span>
-          {/if}
+          {#if slashNode}<span class="crumb-sep">/</span><span class="crumb-cur">{slashNode.label}</span>{/if}
         </div>
-        <div class="slash-list">
+        <div class="slash-body">
           {#each filteredSlashNodes as node, i}
-            <button
-              class="slash-item"
-              class:selected={i === selectedIdx}
-              onmousedown={() => selectSlashNode(node)}
-              type="button"
-            >
-              <span class="slash-icon">{node.icon || '>'}</span>
-              <div class="slash-info">
-                <span class="slash-label">{node.label}</span>
-                {#if node.children}<span class="slash-arrow">→ มีตัวเลือกย่อย</span>{/if}
-              </div>
+            <button class="slash-row" class:sel={i === selectedIdx} onmousedown={() => selectSlashNode(node)} type="button">
+              <span class="slash-ico">{node.icon || '>'}</span>
+              <span class="slash-txt">{node.label}</span>
+              {#if node.children?.length}<span class="slash-sub">→</span>{/if}
+              {#if node.systemPrompt}<span class="slash-tag">Prompt</span>{/if}
             </button>
           {/each}
           {#if filteredSlashNodes.length === 0}
-            <div class="slash-empty">ไม่มีคำสั่งนี้</div>
+            <div class="slash-none">ไม่มีคำสั่งนี้</div>
           {/if}
         </div>
       </div>
     {:else if showSuggestions && suggestions.length > 0}
-      <div class="suggestions-dropdown">
+      <div class="suggest-box">
+        <div class="suggest-head">ถามต่อเนื่อง</div>
         {#each suggestions as s, i}
-          <button
-            class="suggestion-item"
-            class:selected={i === selectedIdx}
-            onmousedown={() => selectSuggestion(s)}
-            type="button"
-          >
-            <Icon name="search" size={12} />
+          <button class="suggest-row" class:sel={i === selectedIdx} onmousedown={() => selectSuggestion(s)} type="button">
+            <span class="suggest-arr">→</span>
             <span>{s}</span>
           </button>
         {/each}
       </div>
     {/if}
-    <textarea
-      bind:this={textareaRef}
-      bind:value={text}
-      oninput={handleInput}
-      onkeydown={handleKeydown}
-      onblur={handleBlur}
-      placeholder="พิมพ์ / เพื่อดูคำสั่ง หรือถาม Oracle ได้เลย..."
-      rows="1"
-      disabled={chatStore.isProcessing}
-      class="chat-textarea"
-    />
-  </div>
 
-  <div class="input-actions">
-    <button class="icon-btn" onclick={handleAttach} type="button" aria-label="แนบไฟล์">
-      <Icon name="plus-circle" size={20} />
-    </button>
-    <button class="icon-btn" onclick={handleSearch} type="button" aria-label="ค้นหา">
-      <Icon name="search" size={20} />
-    </button>
-    <button 
-      class="btn-send" 
-      onclick={handleSend} 
-      disabled={!text.trim() || chatStore.isProcessing}
-      type="button"
-    >
-      {#if chatStore.isProcessing}
-        <span class="spinner" />
-      {:else}
-        <Icon name="send" size={18} />
-        ส่ง
-      {/if}
-    </button>
+    <div class="input-bar">
+      <button class="bar-btn voice-btn" class:active={isListening} onclick={toggleVoice} type="button" title="พูด">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>
+        </svg>
+      </button>
+
+      <textarea
+        bind:this={textareaRef}
+        bind:value={text}
+        oninput={handleInput}
+        onkeydown={handleKeydown}
+        placeholder="Ask anything... (/ for skills)"
+        rows="1"
+        disabled={chatStore.isProcessing}
+        class="input-field"
+      />
+
+      <button class="bar-btn cmd-btn" onclick={() => { text = '/'; autoResize(); textareaRef?.focus(); }} type="button" title="คำสั่ง">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/>
+        </svg>
+      </button>
+
+      <button class="send-btn" onclick={handleSend} disabled={!text.trim() || chatStore.isProcessing} type="button">
+        {#if chatStore.isProcessing}
+          <span class="spinner"></span>
+        {:else}
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+        {/if}
+      </button>
+    </div>
   </div>
 </div>
 
 <style>
   .chat-input-wrapper {
-    display: flex;
-    align-items: flex-end;
-    gap: 12px;
-    background: #1a232f;
-    border-radius: 24px;
-    padding: 10px 16px 10px 22px;
-    border: 1px solid #2f3b4b;
-    transition: 0.2s;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-    position: relative;
+    width: 100%;
   }
 
-  .chat-input-wrapper:focus-within {
-    border-color: #5a7dff;
-    box-shadow: 0 0 0 3px rgba(90, 125, 255, 0.2);
-  }
-
-  .input-with-suggestions {
-    flex: 1;
-    position: relative;
-    display: flex;
-    flex-direction: column;
-  }
-
-  /* Slash dropdown */
-  .slash-dropdown {
-    position: absolute;
-    bottom: 100%;
-    left: 0;
-    right: 0;
-    margin-bottom: 6px;
-    background: #1e293b;
-    border: 1px solid #2f3b4b;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
-    z-index: 50;
-  }
-
-  .slash-breadcrumb {
-    display: flex;
+  .prompt-badge {
+    display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: 8px 14px;
-    background: #0f172a;
-    border-bottom: 1px solid #2f3b4b;
-    font-size: 11px;
-    flex-wrap: wrap;
-  }
-
-  .crumb-item {
-    color: #5a7dff;
-    font-weight: 600;
-  }
-
-  .crumb-sep {
-    color: #475569;
-  }
-
-  .crumb-current {
-    color: #e9f0f8;
-    font-weight: 600;
-  }
-
-  .slash-list {
-    max-height: 240px;
-    overflow-y: auto;
-  }
-
-  .slash-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    width: 100%;
-    text-align: left;
-    padding: 10px 14px;
-    border: none;
-    background: transparent;
-    color: #cbd5e1;
-    font-size: 13px;
-    cursor: pointer;
-    transition: 0.1s;
-    border-bottom: 1px solid #1a232f;
-  }
-
-  .slash-item:last-child { border-bottom: none; }
-
-  .slash-item:hover,
-  .slash-item.selected {
-    background: #2a3648;
-    color: #e9f0f8;
-  }
-
-  .slash-icon {
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #2a3648;
-    border-radius: 6px;
-    flex-shrink: 0;
-  }
-
-  .slash-info {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .slash-label {
-    display: block;
-    font-weight: 500;
-  }
-
-  .slash-arrow {
-    display: block;
-    font-size: 10px;
-    color: #60738b;
-    margin-top: 1px;
-  }
-
-  .slash-empty {
-    padding: 16px;
-    text-align: center;
-    color: #60738b;
-    font-size: 12px;
-  }
-
-  /* Suggestions dropdown */
-  .suggestions-dropdown {
-    position: absolute;
-    bottom: 100%;
-    left: 0;
-    right: 0;
+    padding: 3px 10px 3px 8px;
     margin-bottom: 6px;
-    background: #1e293b;
-    border: 1px solid #2f3b4b;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
-    z-index: 50;
+    border-radius: 20px;
+    background: #f0f4ff;
+    border: 1px solid #c7d2fe;
+    font-size: 11px;
+    color: #4338ca;
+  }
+  .prompt-dot { font-size: 10px; }
+  .prompt-name { font-weight: 600; }
+  .prompt-x { background: none; border: none; color: #a5b4fc; cursor: pointer; font-size: 14px; padding: 0 2px; line-height: 1; }
+  .prompt-x:hover { color: #ef4444; }
+
+  .input-area {
+    position: relative;
   }
 
-  .suggestion-item {
+  .input-bar {
     display: flex;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-    text-align: left;
-    padding: 8px 14px;
-    border: none;
-    background: transparent;
-    color: #cbd5e1;
-    font-size: 13px;
-    cursor: pointer;
-    transition: 0.1s;
+    align-items: flex-end;
+    gap: 4px;
+    background: #f8fafc;
+    border-radius: 16px;
+    padding: 7px 7px 7px 11px;
+    transition: all 0.2s;
+    box-shadow: 0 0 0 0 transparent;
+  }
+  .input-bar:focus-within {
+    background: white;
+    box-shadow: 0 0 0 1px #e2e8f0, 0 4px 16px rgba(0,0,0,0.06);
+    padding: 6px 6px 6px 10px;
   }
 
-  .suggestion-item:hover,
-  .suggestion-item.selected {
-    background: #2a3648;
-    color: #e9f0f8;
+  .bar-btn {
+    width: 34px; height: 34px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 10px; border: none; background: transparent;
+    color: #94a3b8; cursor: pointer; transition: 0.15s; flex-shrink: 0;
+  }
+  .bar-btn:hover { background: #f1f5f9; color: #475569; }
+  .voice-btn.active { background: #fef2f2; color: #ef4444; animation: pulse 1s infinite; }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.3); }
+    50% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
   }
 
-  .suggestion-item :global(svg) {
-    color: #5a7dff;
-    flex-shrink: 0;
-  }
-
-  .chat-textarea {
+  .input-field {
     flex: 1;
-    background: transparent;
-    border: none;
-    outline: none;
-    color: #e9f0f8;
-    font-size: 15px;
-    resize: none;
-    padding: 6px 0;
-    line-height: 1.6;
-    min-height: 28px;
-    max-height: 140px;
-    font-weight: 400;
-    letter-spacing: 0.2px;
+    background: transparent; border: none; outline: none;
+    color: #0f172a; font-size: 14px; resize: none;
+    padding: 6px 0; line-height: 1.5; min-height: 24px; max-height: 120px;
     font-family: inherit;
   }
+  .input-field::placeholder { color: #cbd5e1; }
+  .input-field:disabled { opacity: 0.5; }
 
-  .chat-textarea::placeholder {
-    color: #60738b;
-    font-weight: 350;
+  .send-btn {
+    width: 34px; height: 34px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 10px; border: none; background: #0f172a;
+    color: white; cursor: pointer; transition: 0.15s; flex-shrink: 0;
   }
-
-  .chat-textarea:disabled {
-    opacity: 0.5;
-  }
-
-  .input-actions {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-shrink: 0;
-  }
-
-  .icon-btn {
-    background: transparent;
-    border: none;
-    color: #7e93ad;
-    padding: 6px;
-    border-radius: 30px;
-    cursor: pointer;
-    transition: 0.15s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-  }
-
-  .icon-btn:hover {
-    background: #2a3648;
-    color: #d3e2f5;
-  }
-
-  .btn-send {
-    background: #3a5bdd;
-    border: none;
-    border-radius: 40px;
-    padding: 8px 22px;
-    color: white;
-    font-weight: 600;
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    transition: 0.15s;
-    box-shadow: 0 2px 10px rgba(58, 91, 221, 0.3);
-    letter-spacing: 0.3px;
-    white-space: nowrap;
-  }
-
-  .btn-send:hover:not(:disabled) {
-    background: #4b6df5;
-    transform: scale(1.01);
-    box-shadow: 0 6px 18px rgba(58, 91, 221, 0.4);
-  }
-
-  .btn-send:active:not(:disabled) {
-    transform: scale(0.96);
-  }
-
-  .btn-send:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    transform: none;
-  }
+  .send-btn:hover:not(:disabled) { background: #1e293b; transform: scale(1.05); }
+  .send-btn:active:not(:disabled) { transform: scale(0.95); }
+  .send-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
   .spinner {
-    display: inline-block;
-    width: 18px;
-    height: 18px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-top-color: white;
-    border-radius: 50%;
-    animation: spin 0.6s linear infinite;
+    display: inline-block; width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,0.3); border-top-color: white;
+    border-radius: 50%; animation: spin 0.6s linear infinite;
   }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
+  /* ── Slash ── */
+  .slash-dropdown {
+    position: absolute; bottom: 100%; left: 0; right: 0; margin-bottom: 6px;
+    background: white; border: 1px solid #e2e8f0; border-radius: 12px;
+    overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1); z-index: 50;
   }
-
-  @media (max-width: 640px) {
-    .chat-input-wrapper {
-      flex-wrap: wrap;
-      padding: 12px 14px;
-    }
-
-    .input-actions {
-      width: 100%;
-      justify-content: flex-end;
-    }
-
-    .btn-send {
-      padding: 6px 16px;
-      font-size: 13px;
-    }
+  .slash-crumb {
+    display: flex; align-items: center; gap: 4px; padding: 8px 14px;
+    background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-size: 11px; flex-wrap: wrap;
   }
+  .crumb-part { color: #6366f1; font-weight: 600; }
+  .crumb-sep { color: #cbd5e1; }
+  .crumb-cur { color: #0f172a; font-weight: 600; }
+  .slash-body { max-height: 240px; overflow-y: auto; }
+  .slash-row {
+    display: flex; align-items: center; gap: 8px;
+    width: 100%; text-align: left; padding: 9px 14px;
+    border: none; background: transparent; color: #334155;
+    font-size: 13px; cursor: pointer; transition: 0.1s;
+    border-bottom: 1px solid #f1f5f9;
+  }
+  .slash-row:last-child { border-bottom: none; }
+  .slash-row:hover, .slash-row.sel { background: #f1f5f9; }
+  .slash-ico { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; background: #f1f5f9; border-radius: 6px; flex-shrink: 0; font-size: 12px; }
+  .slash-txt { flex: 1; font-weight: 500; }
+  .slash-sub { color: #94a3b8; font-size: 12px; }
+  .slash-tag { font-size: 8px; background: #eef2ff; color: #4338ca; padding: 1px 6px; border-radius: 4px; font-weight: 600; }
+  .slash-none { padding: 16px; text-align: center; color: #94a3b8; font-size: 12px; }
+
+  /* ── Suggestions ── */
+  .suggest-box {
+    position: absolute; bottom: 100%; left: 0; right: 0; margin-bottom: 6px;
+    background: white; border: 1px solid #e2e8f0; border-radius: 12px;
+    overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1); z-index: 50;
+  }
+  .suggest-head {
+    padding: 8px 14px 4px; font-size: 9px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    color: #6366f1; opacity: 0.6;
+  }
+  .suggest-row {
+    display: flex; align-items: flex-start; gap: 10px;
+    width: 100%; text-align: left; padding: 9px 14px;
+    border: none; background: transparent; color: #334155;
+    font-size: 13px; line-height: 1.4; cursor: pointer; transition: 0.1s;
+    border-bottom: 1px solid #f1f5f9;
+  }
+  .suggest-row:last-child { border-bottom: none; }
+  .suggest-row:hover, .suggest-row.sel { background: #f1f5f9; }
+  .suggest-arr { color: #6366f1; flex-shrink: 0; font-size: 12px; margin-top: 2px; }
 </style>

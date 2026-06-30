@@ -10,6 +10,13 @@
     margin: 0;
     padding: 0;
   }
+
+  /* Override @tailwindcss/forms blue focus ring */
+  input:focus, textarea:focus, select:focus {
+    outline: none !important;
+    box-shadow: none !important;
+    --tw-ring-shadow: 0 0 transparent !important;
+  }
 }
 
 @layer components {
@@ -183,10 +190,6 @@
     outline: none;
     box-sizing: border-box;
     transition: border-color 0.15s;
-  }
-  .input-base:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
   }
 
   .modal-overlay {

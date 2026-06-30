@@ -100,16 +100,21 @@
 <aside 
 	class="bg-white border rounded-2xl shadow-sm flex flex-col overflow-hidden transition-all duration-300 shrink-0 box-border h-full
 	{isOpen ? 'w-56 border-zinc-200/80' : 'w-14 border-zinc-200/80'}"
+	style="border-left: 3px solid #6366f1;"
 >
-	<div class="h-12 px-3 border-b border-zinc-100 flex items-center {isOpen ? 'justify-between' : 'justify-center'} shrink-0">
+	<div class="h-12 px-3 flex items-center {isOpen ? 'justify-between' : 'justify-center'} shrink-0" 
+		style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);">
 		<button 
 			onclick={toggleSidebar}
-			class="p-1.5 hover:bg-zinc-100 text-zinc-500 rounded-lg transition-all active:scale-95 flex items-center justify-center"
+			class="p-1.5 hover:bg-white/20 text-white/80 rounded-lg transition-all active:scale-95 flex items-center justify-center"
 			aria-label={isOpen ? 'ปิดเมนู' : 'เปิดเมนู'}
 			type="button"
 		>
-			<Icon name={isOpen ? 'ai' : 'ai'} size={18} class={isOpen ? 'text-zinc-500' : 'text-blue-500'} />
+			<Icon name={isOpen ? 'ai' : 'ai'} size={18} class="text-white" />
 		</button>
+		{#if isOpen}
+			<span class="text-[10px] font-bold text-white/70 uppercase tracking-wider">Swor</span>
+		{/if}
 	</div>
 
 	<div class="flex-1 overflow-y-auto p-1.5 space-y-0.5 overflow-x-hidden">
@@ -117,7 +122,7 @@
 		<div class="pt-1">
 			{#if isOpen}
 				<div class="flex items-center justify-between px-2 py-0.5">
-					<span class="text-[9px] font-bold text-zinc-400 uppercase tracking-wider">Notebooks</span>
+					<span class="text-[9px] font-bold text-indigo-500 uppercase tracking-wider">📓 Notebooks</span>
 					<button
 						onclick={() => showCreateModal = true}
 						class="nb-plus"
@@ -138,10 +143,11 @@
 							href={`/notebook/${notebook.id}`} 
 							class="flex items-center gap-2 rounded-lg transition-colors
 							{isOpen ? 'px-2.5 py-1.5' : 'px-0 py-1.5 justify-center'}
-							{page.url.pathname === `/notebook/${notebook.id}` ? 'bg-blue-50/70 text-blue-600 font-medium' : 'text-zinc-700 hover:bg-zinc-50'}"
+							{page.url.pathname === `/notebook/${notebook.id}` ? 'bg-indigo-50 text-indigo-600 font-medium' : 'text-zinc-700 hover:bg-zinc-50'}"
 						>
-							<div class="rounded-lg bg-zinc-50 border border-zinc-100 flex items-center justify-center shrink-0 w-7 h-7 text-zinc-600">
-								<Icon name="folder" size={14} />
+							<div class="rounded-lg flex items-center justify-center shrink-0 w-7 h-7 text-white"
+								style="background: linear-gradient(135deg, #6366f1, #818cf8);">
+								<Icon name="folder" size={14} class="text-white" />
 							</div>
 							{#if isOpen}
 								<span class="text-xs truncate flex-1">{notebook.title}</span>
@@ -153,6 +159,7 @@
 								onclick={async (e) => {
 									e.preventDefault();
 									if (!confirm(`ลบ Notebook "${notebook.title}" ทั้งหมด?`)) return;
+									await supabase.from('chat_sessions').update({ notebook_id: null }).eq('notebook_id', notebook.id);
 									await supabase.from('notebook_items').delete().eq('notebook_id', notebook.id);
 									await supabase.from('notebooks').delete().eq('id', notebook.id);
 									notebooks = notebooks.filter((n: any) => n.id !== notebook.id);
@@ -167,13 +174,14 @@
 		</div>
 
 		<div class="pt-1">
-			{#if isOpen}<div class="text-[9px] font-bold text-zinc-400 uppercase tracking-wider px-2 py-0.5">Collections</div>{/if}
+			{#if isOpen}<div class="text-[9px] font-bold text-emerald-500 uppercase tracking-wider px-2 py-0.5">💬 Chats</div>{/if}
 			
 			<a href="/chat" class="flex items-center gap-2 rounded-lg transition-colors
 				{isOpen ? 'px-2.5 py-1.5' : 'px-0 py-1.5 justify-center'}
-				{page.url.pathname === '/chat' ? 'bg-blue-50/70 text-blue-600 font-medium' : 'text-zinc-700 hover:bg-zinc-50'}">
-				<div class="rounded-lg bg-zinc-50 border border-zinc-100 flex items-center justify-center shrink-0 w-7 h-7 text-zinc-600">
-					<Icon name="chat" size={14} />
+				{page.url.pathname === '/chat' ? 'bg-emerald-50 text-emerald-600 font-medium' : 'text-zinc-700 hover:bg-zinc-50'}">
+				<div class="rounded-lg flex items-center justify-center shrink-0 w-7 h-7 text-white"
+					style="background: linear-gradient(135deg, #10b981, #34d399);">
+					<Icon name="chat" size={14} class="text-white" />
 				</div>
 				{#if isOpen}
 					<span class="text-xs">Recent Chats</span>
@@ -182,28 +190,42 @@
 		</div>
 
 		<div class="pt-1">
-			{#if isOpen}<div class="text-[9px] font-bold text-zinc-400 uppercase tracking-wider px-2 py-0.5">Blog</div>{/if}
+			{#if isOpen}<div class="text-[9px] font-bold text-blue-500 uppercase tracking-wider px-2 py-0.5">📝 Blog</div>{/if}
 			
 			<a href="/blog" class="flex items-center gap-2 rounded-lg transition-colors
 				{isOpen ? 'px-2.5 py-1.5' : 'px-0 py-1.5 justify-center'}
-				{page.url.pathname === '/blog' ? 'bg-blue-50/70 text-blue-600 font-medium' : 'text-zinc-700 hover:bg-zinc-50'}">
-				<div class="rounded-lg bg-zinc-50 border border-zinc-100 flex items-center justify-center shrink-0 w-7 h-7 text-zinc-600">
-					<Icon name="library" size={14} />
+				{page.url.pathname === '/blog' ? 'bg-blue-50 text-blue-600 font-medium' : 'text-zinc-700 hover:bg-zinc-50'}">
+				<div class="rounded-lg flex items-center justify-center shrink-0 w-7 h-7 text-white"
+					style="background: linear-gradient(135deg, #3b82f6, #60a5fa);">
+					<Icon name="library" size={14} class="text-white" />
 				</div>
 				{#if isOpen}
 					<span class="text-xs">บทความทั้งหมด</span>
 				{/if}
 			</a>
+
+			<a href="/library" class="flex items-center gap-2 rounded-lg transition-colors
+				{isOpen ? 'px-2.5 py-1.5' : 'px-0 py-1.5 justify-center'}
+				{page.url.pathname === '/library' ? 'bg-amber-50 text-amber-600 font-medium' : 'text-zinc-700 hover:bg-zinc-50'}">
+				<div class="rounded-lg flex items-center justify-center shrink-0 w-7 h-7"
+					style="background: linear-gradient(135deg, #f59e0b, #fbbf24);">
+					<span class="text-white text-xs">📚</span>
+				</div>
+				{#if isOpen}
+					<span class="text-xs">ห้องสมุด</span>
+				{/if}
+			</a>
 		</div>
 
 		<div class="pt-1">
-			{#if isOpen}<div class="text-[9px] font-bold text-zinc-400 uppercase tracking-wider px-2 py-0.5">Astro</div>{/if}
+			{#if isOpen}<div class="text-[9px] font-bold text-violet-500 uppercase tracking-wider px-2 py-0.5">🔮 Astro</div>{/if}
 			
 			<a href="/astro" class="flex items-center gap-2 rounded-lg transition-colors
 				{isOpen ? 'px-2.5 py-1.5' : 'px-0 py-1.5 justify-center'}
-				{page.url.pathname === '/astro' ? 'bg-blue-50/70 text-blue-600 font-medium' : 'text-zinc-700 hover:bg-zinc-50'}">
-				<div class="rounded-lg bg-zinc-50 border border-zinc-100 flex items-center justify-center shrink-0 w-7 h-7 text-zinc-600">
-					<Icon name="globe" size={14} />
+				{page.url.pathname === '/astro' ? 'bg-violet-50 text-violet-600 font-medium' : 'text-zinc-700 hover:bg-zinc-50'}">
+				<div class="rounded-lg flex items-center justify-center shrink-0 w-7 h-7 text-white"
+					style="background: linear-gradient(135deg, #8b5cf6, #a78bfa);">
+					<Icon name="globe" size={14} class="text-white" />
 				</div>
 				{#if isOpen}
 					<span class="text-xs">Astro Dashboard</span>
@@ -211,18 +233,34 @@
 			</a>
 		</div>
 
-		<!-- Personality -->
 		<div class="pt-1">
-			{#if isOpen}<div class="text-[9px] font-bold text-zinc-400 uppercase tracking-wider px-2 py-0.5">Personality</div>{/if}
+			{#if isOpen}<div class="text-[9px] font-bold text-rose-500 uppercase tracking-wider px-2 py-0.5">🧠 Personality</div>{/if}
 			
 			<a href="/personality" class="flex items-center gap-2 rounded-lg transition-colors
 				{isOpen ? 'px-2.5 py-1.5' : 'px-0 py-1.5 justify-center'}
-				{page.url.pathname === '/personality' ? 'bg-blue-50/70 text-blue-600 font-medium' : 'text-zinc-700 hover:bg-zinc-50'}">
-				<div class="rounded-lg bg-zinc-50 border border-zinc-100 flex items-center justify-center shrink-0 w-7 h-7 text-zinc-600">
-					<Icon name="user" size={14} />
+				{page.url.pathname === '/personality' ? 'bg-rose-50 text-rose-600 font-medium' : 'text-zinc-700 hover:bg-zinc-50'}">
+				<div class="rounded-lg flex items-center justify-center shrink-0 w-7 h-7 text-white"
+					style="background: linear-gradient(135deg, #f43f5e, #fb7185);">
+					<Icon name="user" size={14} class="text-white" />
 				</div>
 				{#if isOpen}
 					<span class="text-xs">บุคลิกภาพ (MBTI)</span>
+				{/if}
+			</a>
+		</div>
+
+		<div class="pt-1">
+			{#if isOpen}<div class="text-[9px] font-bold text-amber-500 uppercase tracking-wider px-2 py-0.5">⚡ Prompts</div>{/if}
+			
+			<a href="/prompts" class="flex items-center gap-2 rounded-lg transition-colors
+				{isOpen ? 'px-2.5 py-1.5' : 'px-0 py-1.5 justify-center'}
+				{page.url.pathname === '/prompts' ? 'bg-amber-50 text-amber-600 font-medium' : 'text-zinc-700 hover:bg-zinc-50'}">
+				<div class="rounded-lg flex items-center justify-center shrink-0 w-7 h-7"
+					style="background: linear-gradient(135deg, #f59e0b, #fbbf24);">
+					<span class="text-white text-xs">⚡</span>
+				</div>
+				{#if isOpen}
+					<span class="text-xs">Prompt ของฉัน</span>
 				{/if}
 			</a>
 		</div>
@@ -251,23 +289,25 @@
 		</div>
 	</div>
 
-	<div class="border-t border-zinc-100 shrink-0 p-1.5">
+	<div class="shrink-0 p-1.5" style="background: linear-gradient(180deg, transparent, #f8fafc);">
+		<hr class="border-t border-zinc-100 mb-1.5" />
 		{#if isOpen}
 			<button 
 				onclick={toggleLogout}
 				onkeydown={handleKeydown}
-				class="flex items-center gap-2 w-full px-2 py-1 rounded-lg hover:bg-zinc-50 transition-colors text-left"
+				class="flex items-center gap-2 w-full px-2 py-1 rounded-lg hover:bg-indigo-50 transition-colors text-left"
 				type="button"
 				aria-expanded={showLogout}
 				aria-label="เมนูผู้ใช้"
 			>
-				<div class="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-[10px] font-bold shrink-0">
+				<div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 text-white"
+					style="background: linear-gradient(135deg, #6366f1, #a78bfa);">
 					{getInitials(user?.email)}
 				</div>
 				<span class="text-xs font-medium text-zinc-700 truncate flex-1">
 					{user?.email?.split('@')[0] || 'User'}
 				</span>
-				<Icon name="chevron-down" size={12} class="text-zinc-400 transition-transform {showLogout ? 'rotate-180' : ''}" />
+				<span class="text-zinc-300 text-xs transition-transform {showLogout ? 'rotate-180' : ''}">▼</span>
 			</button>
 
 			{#if showLogout}
@@ -276,13 +316,14 @@
 					class="flex items-center gap-2 w-full mt-0.5 px-2.5 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 transition-colors text-red-600"
 					type="button"
 				>
-					<Icon name="log-out" size={14} />
+					<span class="text-xs">🚪</span>
 					<span class="text-xs font-medium">ออกจากระบบ</span>
 				</button>
 			{/if}
 		{:else}
 			<div class="flex justify-center py-1">
-				<div class="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-[10px] font-bold shrink-0">
+				<div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 text-white"
+					style="background: linear-gradient(135deg, #6366f1, #a78bfa);">
 					{getInitials(user?.email)}
 				</div>
 			</div>

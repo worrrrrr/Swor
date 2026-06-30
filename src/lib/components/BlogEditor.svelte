@@ -1,135 +1,40 @@
 <script lang="ts">
   import { supabase } from '$lib/supabaseClient';
   import { goto } from '$app/navigation';
+  import { marked } from 'marked';
 
   let { post }: { post: any } = $props();
 
   let content = $state(post.content || '');
   let title = $state(post.title || '');
+  let tags = $state(Array.isArray(post.tags) ? post.tags.join(', ') : (post.tags || ''));
   let deleting = $state(false);
-
-  interface ChatMsg {
-    id: string;
-    role: 'user' | 'assistant';
-    content: string;
-  }
-
-  let chatMessages = $state<ChatMsg[]>([]);
-  let userQuestions = $state<{ id: string; text: string }[]>([]);
-  let inputText = $state('');
-  let isSending = $state(false);
   let isSaving = $state(false);
-  let showQuestions = $state(false);
-  let hoverTimer: ReturnType<typeof setTimeout> | null = null;
+  let previewMode = $state(false);
 
-  function handleMouseEnter() {
-    if (hoverTimer) clearTimeout(hoverTimer);
-    showQuestions = true;
-  }
+  let contentHtml = $derived(content ? marked(content) : '');
 
-  function handleMouseLeave() {
-    hoverTimer = setTimeout(() => {
-      showQuestions = false;
-    }, 200);
-  }
-
-  function scrollToQuestion(qId: string) {
-    const el = document.getElementById(`chat-msg-${qId}`);
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    showQuestions = false;
-  }
-
-  async function handleSend() {
-    const trimmed = inputText.trim();
-    if (!trimmed || isSending) return;
-
-    const qId = crypto.randomUUID();
-    const userMsg: ChatMsg = { id: qId, role: 'user', content: trimmed };
-
-    chatMessages = [...chatMessages, userMsg];
-    userQuestions = [...userQuestions, { id: qId, text: trimmed }];
-    inputText = '';
-    isSending = true;
-
-    try {
-      const userTopics = chatMessages
-        .filter(m => m.role === 'user')
-        .map(m => m.content.slice(0, 80).replace(/\n/g, ' '));
-      const context = userTopics.join(' → ');
-      const recent = chatMessages.slice(-4);
-
-      const messagesForApi: { role: string; content: string }[] = [];
-      if (context) {
-        messagesForApi.push({ role: 'system', content: `Previous discussion: ${context}` });
-      }
-      for (const m of recent) {
-        messagesForApi.push({ role: m.role, content: m.content });
-      }
-
-      const { data: { user } } = await supabase.auth.getUser();
-      const meta = user?.user_metadata || {};
-      const personality = meta.personality_mbti ? {
-        mbti: meta.personality_mbti,
-        enneagram: meta.personality_enneagram,
-        wing: meta.personality_enneagram_wing,
-      } : undefined;
-
-      const astroProfile = meta.birth_date ? {
-        birthDate: meta.birth_date,
-        birthTime: meta.birth_time,
-        latitude: meta.latitude,
-        longitude: meta.longitude,
-        timezoneOffset: meta.timezoneOffset,
-      } : undefined;
-
-      const res = await fetch('/api/chat/blog', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: messagesForApi, blogContent: content, personality, astroProfile }),
-      });
-
-      const data = await res.json() as { reply?: string; blogAppend?: string | null };
-
-      if (!res.ok) throw new Error(data.reply || 'API error');
-
-      const assistantMsg: ChatMsg = {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: data.reply || '',
-      };
-      chatMessages = [...chatMessages, assistantMsg];
-
-      if (data.blogAppend) {
-        content = content + '\n\n' + data.blogAppend;
-      }
-    } catch (err) {
-      chatMessages = [...chatMessages, {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: 'ขออภัย เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง',
-      }];
-      console.error('[BlogEditor] send error:', err);
-    } finally {
-      isSending = false;
-    }
-  }
-
-  function handleKeydown(e: KeyboardEvent) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
+  function parseTags(raw: string): string[] {
+    return raw.split(',').map(t => t.trim()).filter(Boolean);
   }
 
   async function saveDraft() {
     isSaving = true;
     await supabase.from('posts').update({ title, content }).eq('id', post.id);
+    const tagList = parseTags(tags);
+    if (tagList.length > 0) {
+      const { error: _te } = await supabase.from('posts').update({ tags: tagList }).eq('id', post.id);
+    }
     isSaving = false;
   }
 
   async function publish() {
     isSaving = true;
     await supabase.from('posts').update({ title, content, published: true }).eq('id', post.id);
+    const tagList = parseTags(tags);
+    if (tagList.length > 0) {
+      const { error: _te } = await supabase.from('posts').update({ tags: tagList }).eq('id', post.id);
+    }
     isSaving = false;
     goto(`/blog/${post.slug}`);
   }
@@ -143,106 +48,46 @@
   }
 </script>
 
-<div class="blog-editor">
+<div class="editor-wrap">
   <div class="editor-header">
-    <button class="btn-back" onclick={() => goto('/blog')} type="button">←</button>
+    <button class="btn-back" onclick={() => goto(`/blog/${post.slug}`)} type="button">← กลับ</button>
     <input class="title-input" bind:value={title} placeholder="ชื่อบทความ..." />
     <div class="header-actions">
       <button class="btn-save" onclick={saveDraft} disabled={isSaving} type="button">
-        {isSaving ? 'กำลังบันทึก...' : '💾 Save Draft'}
+        {isSaving ? 'กำลังบันทึก...' : 'บันทึกร่าง'}
       </button>
-      <button class="btn-publish" onclick={publish} disabled={isSaving} type="button">
-        📤 Publish
-      </button>
-      <button class="btn-delete-editor" onclick={deletePost} disabled={deleting} type="button" title="ลบบทความ">
-        🗑
-      </button>
+      <button class="btn-publish" onclick={publish} disabled={isSaving} type="button">เผยแพร่</button>
+      <button class="btn-delete-editor" onclick={deletePost} disabled={deleting} type="button" title="ลบบทความ">🗑</button>
     </div>
   </div>
 
-  <div class="editor-body">
-    <div class="editor-main">
-      <div class="markdown-area">
-        <textarea
-          class="content-textarea"
-          bind:value={content}
-          placeholder="เริ่มเขียนบทความของคุณด้วย Markdown..."
-        ></textarea>
-        <div
-          class="questions-trigger"
-          onmouseenter={handleMouseEnter}
-          onmouseleave={handleMouseLeave}
-          role="button"
-          tabindex="0"
-        >
-          <span class="trigger-icon">📝</span>
-        </div>
-
-        {#if showQuestions}
-          <div
-            class="questions-popup"
-            onmouseenter={handleMouseEnter}
-            onmouseleave={handleMouseLeave}
-            role="dialog"
-            aria-label="สารบัญคำถาม"
-          >
-            <div class="popup-header">สารบัญคำถาม</div>
-            {#if userQuestions.length === 0}
-              <div class="popup-empty">ยังไม่มีคำถาม</div>
-            {:else}
-              {#each userQuestions as q (q.id)}
-                <button
-                  class="question-item"
-                  onclick={() => scrollToQuestion(q.id)}
-                  type="button"
-                >
-                  {q.text}
-                </button>
-              {/each}
-            {/if}
-          </div>
-        {/if}
-      </div>
-
-      <div class="chat-section">
-        <div class="chat-messages">
-          {#each chatMessages as msg (msg.id)}
-            <div id="chat-msg-{msg.id}" class="chat-msg {msg.role}">
-              <div class="msg-label">{msg.role === 'user' ? 'คุณ' : 'AI'}</div>
-              <div class="msg-content">{msg.content}</div>
-            </div>
-          {/each}
-          {#if isSending}
-            <div class="chat-msg assistant">
-              <div class="msg-label">AI</div>
-              <div class="msg-content typing">กำลังพิมพ์...</div>
-            </div>
-          {/if}
-        </div>
-        <div class="chat-input-row">
-          <textarea
-            class="chat-input"
-            bind:value={inputText}
-            onkeydown={handleKeydown}
-            placeholder="ถาม AI เกี่ยวกับเนื้อหาที่จะเขียน..."
-            rows="1"
-            disabled={isSending}
-          ></textarea>
-          <button class="btn-send-chat" onclick={handleSend} disabled={!inputText.trim() || isSending} type="button">
-            ส่ง
-          </button>
-        </div>
-      </div>
-    </div>
+  <div class="tags-row">
+    <input class="tags-input" bind:value={tags} placeholder="แท็ก: แนวคิด, ชีวิต, เทคโนโลยี (คั่นด้วยคอมม่า)" />
   </div>
+
+  <div class="editor-toolbar">
+    <div class="toolbar-tabs">
+      <button class="tab-btn" class:active={!previewMode} onclick={() => previewMode = false} type="button">เขียน</button>
+      <button class="tab-btn" class:active={previewMode} onclick={() => previewMode = true} type="button">พรีวิว</button>
+    </div>
+    {#if !previewMode}
+      <span class="toolbar-hint">Markdown</span>
+    {/if}
+  </div>
+
+  {#if previewMode}
+    <div class="editor-preview prose prose-slate max-w-none">{@html contentHtml}</div>
+  {:else}
+    <textarea class="editor-textarea" bind:value={content} placeholder="เริ่มเขียนบทความของคุณด้วย Markdown..."></textarea>
+  {/if}
 </div>
 
 <style>
-  .blog-editor {
+  .editor-wrap {
     display: flex;
     flex-direction: column;
     height: 100%;
-    max-width: 900px;
+    max-width: 800px;
     margin: 0 auto;
   }
 
@@ -256,13 +101,14 @@
   }
 
   .btn-back {
-    font-size: 16px;
+    font-size: 13px;
+    color: #64748b;
     background: none;
     border: none;
     cursor: pointer;
-    color: #64748b;
     padding: 4px 8px;
     border-radius: 6px;
+    transition: all 0.15s;
   }
   .btn-back:hover {
     color: #0f172a;
@@ -271,8 +117,8 @@
 
   .title-input {
     flex: 1;
-    font-size: 16px;
-    font-weight: 600;
+    font-size: 18px;
+    font-weight: 700;
     color: #0f172a;
     border: none;
     outline: none;
@@ -280,7 +126,7 @@
     padding: 4px 0;
   }
   .title-input::placeholder {
-    color: #94a3b8;
+    color: #cbd5e1;
   }
 
   .header-actions {
@@ -291,13 +137,14 @@
 
   .btn-save {
     font-size: 12px;
-    padding: 6px 14px;
+    padding: 7px 16px;
     border-radius: 8px;
     border: 1px solid #e2e8f0;
     background: white;
     color: #475569;
     cursor: pointer;
-    font-weight: 500;
+    font-weight: 600;
+    transition: all 0.15s;
   }
   .btn-save:hover {
     background: #f8fafc;
@@ -310,13 +157,14 @@
 
   .btn-publish {
     font-size: 12px;
-    padding: 6px 14px;
+    padding: 7px 16px;
     border-radius: 8px;
     border: none;
     background: #3b82f6;
     color: white;
     cursor: pointer;
-    font-weight: 500;
+    font-weight: 600;
+    transition: background 0.15s;
   }
   .btn-publish:hover {
     background: #2563eb;
@@ -346,227 +194,132 @@
     cursor: not-allowed;
   }
 
-  .editor-body {
-    flex: 1;
+  .tags-row {
     display: flex;
-    overflow: hidden;
+    padding: 8px 0;
+    border-bottom: 1px solid #e2e8f0;
+    flex-shrink: 0;
   }
 
-  .editor-main {
+  .tags-input {
     flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-
-  .markdown-area {
-    flex: 1;
-    position: relative;
-    display: flex;
-    overflow: hidden;
-    min-height: 0;
-  }
-
-  .content-textarea {
-    flex: 1;
+    font-size: 12px;
+    color: #64748b;
     border: none;
     outline: none;
-    resize: none;
-    font-size: 14px;
-    line-height: 1.7;
-    color: #334155;
     background: transparent;
-    padding: 20px 24px;
-    font-family: 'SF Mono', 'Fira Code', monospace;
+    padding: 2px 0;
   }
-  .content-textarea::placeholder {
+  .tags-input::placeholder {
     color: #cbd5e1;
   }
 
-  .questions-trigger {
-    position: absolute;
-    right: 8px;
-    top: 12px;
-    width: 28px;
-    height: 28px;
+  .editor-toolbar {
     display: flex;
     align-items: center;
-    justify-content: center;
-    border-radius: 6px;
-    cursor: pointer;
-    z-index: 10;
-    background: white;
-    border: 1px solid #e2e8f0;
-    opacity: 0.5;
-    transition: opacity 0.15s;
-  }
-  .questions-trigger:hover {
-    opacity: 1;
-    background: #f8fafc;
+    gap: 8px;
+    padding: 8px 0;
+    border-bottom: 1px solid #e2e8f0;
+    flex-shrink: 0;
   }
 
-  .trigger-icon {
-    font-size: 14px;
-    line-height: 1;
-  }
-
-  .questions-popup {
-    position: absolute;
-    right: 42px;
-    top: 8px;
-    width: 240px;
-    max-height: 300px;
-    overflow-y: auto;
-    background: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-    z-index: 20;
-    padding: 8px;
-  }
-
-  .popup-header {
-    font-size: 11px;
-    font-weight: 700;
-    color: #94a3b8;
-    text-transform: uppercase;
-    padding: 4px 8px 8px;
-    letter-spacing: 0.05em;
-  }
-
-  .popup-empty {
-    font-size: 12px;
-    color: #cbd5e1;
-    padding: 8px;
-    text-align: center;
-  }
-
-  .question-item {
-    display: block;
-    width: 100%;
-    text-align: left;
-    font-size: 12px;
-    color: #475569;
-    background: none;
-    border: none;
-    padding: 6px 8px;
-    border-radius: 6px;
-    cursor: pointer;
-    line-height: 1.4;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .question-item:hover {
+  .toolbar-tabs {
+    display: flex;
+    gap: 2px;
     background: #f1f5f9;
+    border-radius: 8px;
+    padding: 2px;
+  }
+
+  .tab-btn {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 14px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .tab-btn.active {
+    background: white;
+    color: #0f172a;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .tab-btn:hover:not(.active) {
     color: #0f172a;
   }
 
-  .chat-section {
-    flex-shrink: 0;
-    border-top: 1px solid #e2e8f0;
-    background: #fafbfc;
-    max-height: 300px;
-    display: flex;
-    flex-direction: column;
+  .toolbar-hint {
+    font-size: 10px;
+    color: #94a3b8;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
 
-  .chat-messages {
+  .editor-preview {
     flex: 1;
     overflow-y: auto;
-    padding: 12px 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    min-height: 80px;
-  }
-
-  .chat-msg {
-    max-width: 85%;
-  }
-  .chat-msg.user {
-    align-self: flex-end;
-  }
-  .chat-msg.assistant {
-    align-self: flex-start;
-  }
-
-  .msg-label {
-    font-size: 10px;
-    font-weight: 700;
-    color: #94a3b8;
-    margin-bottom: 2px;
-    text-transform: uppercase;
-  }
-  .chat-msg.user .msg-label {
-    text-align: right;
-  }
-
-  .msg-content {
-    font-size: 13px;
-    line-height: 1.5;
+    padding: 20px 0;
+    font-size: 15px;
+    line-height: 1.8;
     color: #334155;
-    background: white;
-    padding: 8px 12px;
+  }
+  .editor-preview :global(h1),
+  .editor-preview :global(h2),
+  .editor-preview :global(h3) {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    font-weight: 700;
+    color: #0f172a;
+  }
+  .editor-preview :global(p) {
+    margin-bottom: 1em;
+  }
+  .editor-preview :global(code) {
+    background: #f1f5f9;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+  .editor-preview :global(pre) {
+    background: #0f172a;
+    color: #e2e8f0;
+    padding: 16px;
     border-radius: 10px;
-    border: 1px solid #e2e8f0;
-    white-space: pre-wrap;
-    word-break: break-word;
+    overflow-x: auto;
   }
-  .chat-msg.user .msg-content {
-    background: #3b82f6;
-    color: white;
-    border-color: #3b82f6;
+  .editor-preview :global(pre code) {
+    background: none;
+    padding: 0;
   }
-
-  .typing {
-    color: #94a3b8 !important;
+  .editor-preview :global(img) {
+    max-width: 100%;
+    border-radius: 10px;
+  }
+  .editor-preview :global(blockquote) {
+    border-left: 3px solid #e2e8f0;
+    padding-left: 16px;
+    color: #64748b;
     font-style: italic;
   }
 
-  .chat-input-row {
-    display: flex;
-    gap: 8px;
-    padding: 8px 16px;
-    border-top: 1px solid #e2e8f0;
-    background: white;
-  }
-
-  .chat-input {
+  .editor-textarea {
     flex: 1;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 8px 12px;
-    font-size: 13px;
+    border: none;
     outline: none;
     resize: none;
-    font-family: inherit;
-    line-height: 1.4;
-    max-height: 80px;
+    font-size: 15px;
+    line-height: 1.8;
+    color: #334155;
+    background: transparent;
+    padding: 20px 0;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    min-height: 300px;
   }
-  .chat-input:focus {
-    border-color: #3b82f6;
-  }
-  .chat-input:disabled {
-    background: #f8fafc;
-  }
-
-  .btn-send-chat {
-    font-size: 12px;
-    padding: 8px 16px;
-    border-radius: 8px;
-    border: none;
-    background: #3b82f6;
-    color: white;
-    cursor: pointer;
-    font-weight: 600;
-    white-space: nowrap;
-  }
-  .btn-send-chat:hover:not(:disabled) {
-    background: #2563eb;
-  }
-  .btn-send-chat:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
+  .editor-textarea::placeholder {
+    color: #cbd5e1;
   }
 </style>

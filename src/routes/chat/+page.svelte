@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { supabase } from '$lib/supabaseClient';
+  import Icon from '$lib/components/Icon.svelte';
 
   let chats = $state<any[]>([]);
   let loading = $state(true);
@@ -35,37 +36,13 @@
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { data: notebooks } = await supabase
-      .from('notebooks')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('title', 'แชทของฉัน')
-      .limit(1);
-
-    let notebookId: string;
-    if (notebooks && notebooks.length > 0) {
-      notebookId = notebooks[0].id;
-    } else {
-      const { data: newNb } = await supabase
-        .from('notebooks')
-        .insert({ title: 'แชทของฉัน', user_id: user.id })
-        .select('id')
-        .single();
-      notebookId = newNb!.id;
-    }
-
     const { data: session } = await supabase
       .from('chat_sessions')
-      .insert({ title: trimmed, user_id: user.id, notebook_id: notebookId })
+      .insert({ title: trimmed, user_id: user.id })
       .select('id')
       .single();
 
-    if (session) {
-      await supabase.from('notebook_items').insert({
-        notebook_id: notebookId, type: 'chat', title: trimmed, source_id: session.id,
-      });
-      goto(`/chat/${session.id}`);
-    }
+    if (session) goto(`/chat/${session.id}`);
     creating = false;
   }
 
@@ -94,7 +71,10 @@
 
 <div class="page-wrap">
   <div class="list-header">
-    <h1>💬 แชททั้งหมด</h1>
+    <div class="flex items-center gap-3">
+      <Icon name="chat" size={22} class="text-emerald-500" />
+      <h1>แชททั้งหมด</h1>
+    </div>
   </div>
 
   <div class="hero-input">
@@ -129,7 +109,7 @@
             disabled={deleting === chat.id}
             type="button"
             title="ลบแชท"
-          >🗑</button>
+          ><Icon name="trash" size={14} /></button>
         </div>
       {/each}
     </div>
